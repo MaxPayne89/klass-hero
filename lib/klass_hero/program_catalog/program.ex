@@ -45,6 +45,11 @@ defmodule KlassHero.ProgramCatalog.Program do
     field :provider_id, :binary_id
     field :location, :string
     field :cover_image_url, :string
+
+    # Inherited by schedule-generated Sessions as their Session Capacity.
+    # Not the enrollment cap — that is `enrollment_policies.max_enrollment`,
+    # owned by Enrollment and enforced when a place is booked.
+    field :default_session_capacity, :integer
     field :origin, Ecto.Enum, values: [:self_posted, :business_assigned], default: :self_posted
     # Free-text label for academic season grouping (e.g. "School Name 24/25: Semester 2").
     field :season, :string
@@ -76,6 +81,7 @@ defmodule KlassHero.ProgramCatalog.Program do
           provider_id: Ecto.UUID.t() | nil,
           location: String.t() | nil,
           cover_image_url: String.t() | nil,
+          default_session_capacity: integer() | nil,
           origin: :self_posted | :business_assigned | nil,
           season: String.t() | nil,
           registration_period: RegistrationPeriod.t() | nil,
@@ -105,7 +111,8 @@ defmodule KlassHero.ProgramCatalog.Program do
       :end_date,
       :registration_start_date,
       :registration_end_date,
-      :season
+      :season,
+      :default_session_capacity
     ])
     |> maybe_put_change(:provider_id, attrs)
     |> maybe_put_change(:cover_image_url, attrs)
@@ -119,6 +126,7 @@ defmodule KlassHero.ProgramCatalog.Program do
     |> validate_length(:season, max: 255)
     |> validate_inclusion(:category, ProgramCategories.program_categories())
     |> validate_number(:price, greater_than_or_equal_to: 0)
+    |> validate_number(:default_session_capacity, greater_than: 0)
     |> validate_meeting_days()
     |> validate_time_pairing()
     |> validate_date_range()
@@ -150,7 +158,8 @@ defmodule KlassHero.ProgramCatalog.Program do
       :start_date,
       :registration_start_date,
       :registration_end_date,
-      :season
+      :season,
+      :default_session_capacity
     ])
     |> validate_required([:title, :description, :category, :price])
     |> validate_length(:title, min: 1, max: 100)
@@ -161,6 +170,7 @@ defmodule KlassHero.ProgramCatalog.Program do
     |> validate_length(:season, max: 255)
     |> validate_inclusion(:category, ProgramCategories.program_categories())
     |> validate_number(:price, greater_than_or_equal_to: 0)
+    |> validate_number(:default_session_capacity, greater_than: 0)
     |> validate_meeting_days()
     |> validate_time_pairing()
     |> validate_date_range()

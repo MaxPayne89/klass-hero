@@ -136,7 +136,7 @@ msgid "Your Data"
 msgstr ""
 
 #: lib/klass_hero_web/components/core_components.ex:71
-#: lib/klass_hero_web/components/provider_components.ex:1744
+#: lib/klass_hero_web/components/provider_components.ex:1761
 #, elixir-autogen, elixir-format
 msgid "close"
 msgstr ""
@@ -231,7 +231,7 @@ msgstr ""
 msgid "Enroll Now - %{price}"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1463
+#: lib/klass_hero_web/components/provider_components.ex:1480
 #: lib/klass_hero_web/live/booking_live.ex:317
 #, elixir-autogen, elixir-format
 msgid "Enrollment"
@@ -577,8 +577,8 @@ msgid "Dispute Resolution"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:781
-#: lib/klass_hero_web/components/provider_components.ex:3039
-#: lib/klass_hero_web/components/provider_components.ex:3057
+#: lib/klass_hero_web/components/provider_components.ex:3056
+#: lib/klass_hero_web/components/provider_components.ex:3074
 #: lib/klass_hero_web/live/contact_live.ex:71
 #: lib/klass_hero_web/live/contact_live.ex:160
 #: lib/klass_hero_web/live/user_live/login.ex:61
@@ -882,9 +882,9 @@ msgstr ""
 msgid "Select one or both options"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2688
-#: lib/klass_hero_web/components/provider_components.ex:2689
-#: lib/klass_hero_web/components/provider_components.ex:2727
+#: lib/klass_hero_web/components/provider_components.ex:2705
+#: lib/klass_hero_web/components/provider_components.ex:2706
+#: lib/klass_hero_web/components/provider_components.ex:2744
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:468
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:469
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:505
@@ -1333,14 +1333,14 @@ msgstr ""
 msgid "Quick Navigation"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1466
-#: lib/klass_hero_web/components/provider_components.ex:2633
-#: lib/klass_hero_web/components/provider_components.ex:2926
+#: lib/klass_hero_web/components/provider_components.ex:1483
+#: lib/klass_hero_web/components/provider_components.ex:2650
+#: lib/klass_hero_web/components/provider_components.ex:2943
 #, elixir-autogen, elixir-format
 msgid "Actions"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1612
+#: lib/klass_hero_web/components/provider_components.ex:1629
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr ""
@@ -1356,7 +1356,7 @@ msgstr ""
 msgid "All Staff"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1457
+#: lib/klass_hero_web/components/provider_components.ex:1474
 #, elixir-autogen, elixir-format
 msgid "Assigned Staff"
 msgstr ""
@@ -1379,7 +1379,7 @@ msgid "Create profiles for your staff. These will be visible to parents when ass
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:586
-#: lib/klass_hero_web/components/provider_components.ex:1575
+#: lib/klass_hero_web/components/provider_components.ex:1592
 #: lib/klass_hero_web/live/provider/participation_live.html.heex:88
 #: lib/klass_hero_web/live/provider/participation_live.html.heex:115
 #: lib/klass_hero_web/live/settings/children_live.ex:413
@@ -1396,7 +1396,7 @@ msgstr ""
 msgid "Edit Profile"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1614
+#: lib/klass_hero_web/components/provider_components.ex:1631
 #, elixir-autogen, elixir-format
 msgid "Inactive"
 msgstr ""
@@ -1420,26 +1420,26 @@ msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:50
 #: lib/klass_hero_web/components/provider_components.ex:76
-#: lib/klass_hero_web/components/provider_components.ex:1613
-#: lib/klass_hero_web/components/provider_components.ex:3133
-#: lib/klass_hero_web/components/provider_components.ex:3160
+#: lib/klass_hero_web/components/provider_components.ex:1630
+#: lib/klass_hero_web/components/provider_components.ex:3150
+#: lib/klass_hero_web/components/provider_components.ex:3177
 #: lib/klass_hero_web/live/admin/sessions_live.ex:293
 #: lib/klass_hero_web/live/admin/verifications_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "Pending"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1544
+#: lib/klass_hero_web/components/provider_components.ex:1561
 #, elixir-autogen, elixir-format
 msgid "Preview"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1397
+#: lib/klass_hero_web/components/provider_components.ex:1414
 #, elixir-autogen, elixir-format
 msgid "Program Inventory"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1454
+#: lib/klass_hero_web/components/provider_components.ex:1471
 #, elixir-autogen, elixir-format
 msgid "Program Name"
 msgstr ""
@@ -1454,15 +1454,15 @@ msgstr ""
 msgid "Save for Later"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1414
+#: lib/klass_hero_web/components/provider_components.ex:1431
 #, elixir-autogen, elixir-format
 msgid "Search by name..."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1460
-#: lib/klass_hero_web/components/provider_components.ex:2018
-#: lib/klass_hero_web/components/provider_components.ex:2624
-#: lib/klass_hero_web/components/provider_components.ex:2923
+#: lib/klass_hero_web/components/provider_components.ex:1477
+#: lib/klass_hero_web/components/provider_components.ex:2035
+#: lib/klass_hero_web/components/provider_components.ex:2641
+#: lib/klass_hero_web/components/provider_components.ex:2940
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:70
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:152
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:195
@@ -1481,15 +1481,15 @@ msgstr ""
 msgid "Team & Provider Profiles"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1517
-#: lib/klass_hero_web/components/provider_components.ex:2047
+#: lib/klass_hero_web/components/provider_components.ex:1534
+#: lib/klass_hero_web/components/provider_components.ex:2064
 #, elixir-autogen, elixir-format
 msgid "Unassigned"
 msgstr ""
 
 #: lib/klass_hero_web/components/messaging_components.ex:856
 #: lib/klass_hero_web/components/provider_components.ex:53
-#: lib/klass_hero_web/components/provider_components.ex:1615
+#: lib/klass_hero_web/components/provider_components.ex:1632
 #: lib/klass_hero_web/live/admin/messages_live.html.heex:110
 #: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:79
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:455
@@ -1498,7 +1498,7 @@ msgstr ""
 msgid "Unknown"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1555
+#: lib/klass_hero_web/components/provider_components.ex:1572
 #, elixir-autogen, elixir-format
 msgid "View Roster"
 msgstr ""
@@ -1556,14 +1556,14 @@ msgstr ""
 msgid "Broadcast sent to %{count} parents"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:392
-#: lib/klass_hero_web/components/participation_components.ex:617
-#: lib/klass_hero_web/components/participation_components.ex:708
+#: lib/klass_hero_web/components/participation_components.ex:397
+#: lib/klass_hero_web/components/participation_components.ex:622
+#: lib/klass_hero_web/components/participation_components.ex:713
 #: lib/klass_hero_web/components/provider_components.ex:909
-#: lib/klass_hero_web/components/provider_components.ex:1323
-#: lib/klass_hero_web/components/provider_components.ex:1918
-#: lib/klass_hero_web/components/provider_components.ex:2216
-#: lib/klass_hero_web/components/provider_components.ex:2831
+#: lib/klass_hero_web/components/provider_components.ex:1340
+#: lib/klass_hero_web/components/provider_components.ex:1935
+#: lib/klass_hero_web/components/provider_components.ex:2233
+#: lib/klass_hero_web/components/provider_components.ex:2848
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:241
 #: lib/klass_hero_web/live/admin/verifications_live.ex:489
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:111
@@ -1621,8 +1621,8 @@ msgstr ""
 msgid "Data sharing consent"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2621
-#: lib/klass_hero_web/components/provider_components.ex:3020
+#: lib/klass_hero_web/components/provider_components.ex:2638
+#: lib/klass_hero_web/components/provider_components.ex:3037
 #: lib/klass_hero_web/live/settings/children_live.ex:622
 #, elixir-autogen, elixir-format
 msgid "Date of birth"
@@ -1670,17 +1670,17 @@ msgstr ""
 msgid "Failed to submit note"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3014
-#: lib/klass_hero_web/components/provider_components.ex:3043
-#: lib/klass_hero_web/components/provider_components.ex:3059
+#: lib/klass_hero_web/components/provider_components.ex:3031
+#: lib/klass_hero_web/components/provider_components.ex:3060
+#: lib/klass_hero_web/components/provider_components.ex:3076
 #: lib/klass_hero_web/live/settings/children_live.ex:608
 #, elixir-autogen, elixir-format
 msgid "First name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3015
-#: lib/klass_hero_web/components/provider_components.ex:3044
-#: lib/klass_hero_web/components/provider_components.ex:3060
+#: lib/klass_hero_web/components/provider_components.ex:3032
+#: lib/klass_hero_web/components/provider_components.ex:3061
+#: lib/klass_hero_web/components/provider_components.ex:3077
 #: lib/klass_hero_web/live/settings/children_live.ex:614
 #, elixir-autogen, elixir-format
 msgid "Last name"
@@ -1823,8 +1823,8 @@ msgstr ""
 msgid "Save Changes"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1722
-#: lib/klass_hero_web/components/provider_components.ex:1723
+#: lib/klass_hero_web/components/provider_components.ex:1739
+#: lib/klass_hero_web/components/provider_components.ex:1740
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:43
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:151
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:252
@@ -1842,7 +1842,7 @@ msgstr ""
 msgid "Send a message to start the conversation"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3114
+#: lib/klass_hero_web/components/provider_components.ex:3131
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:251
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:249
 #, elixir-autogen, elixir-format
@@ -1973,12 +1973,12 @@ msgstr ""
 msgid "Ages %{min}+"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1224
+#: lib/klass_hero_web/components/provider_components.ex:1241
 #, elixir-autogen, elixir-format
 msgid "Allowed Genders"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3182
+#: lib/klass_hero_web/components/provider_components.ex:3199
 #, elixir-autogen, elixir-format
 msgid "An unexpected error occurred during import."
 msgstr ""
@@ -1990,7 +1990,7 @@ msgstr ""
 msgid "Approve"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:817
+#: lib/klass_hero_web/components/participation_components.ex:822
 #: lib/klass_hero_web/components/provider_components.ex:51
 #: lib/klass_hero_web/live/admin/sessions_live.ex:290
 #: lib/klass_hero_web/live/admin/verifications_live.ex:207
@@ -2052,13 +2052,13 @@ msgstr ""
 msgid "Category"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1173
+#: lib/klass_hero_web/components/provider_components.ex:1190
 #, elixir-autogen, elixir-format
 msgid "Check eligibility at"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2615
-#: lib/klass_hero_web/components/provider_components.ex:2909
+#: lib/klass_hero_web/components/provider_components.ex:2632
+#: lib/klass_hero_web/components/provider_components.ex:2926
 #, elixir-autogen, elixir-format
 msgid "Child Name"
 msgstr ""
@@ -2073,7 +2073,7 @@ msgstr ""
 msgid "Child meets all program requirements"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1296
+#: lib/klass_hero_web/components/provider_components.ex:1313
 #, elixir-autogen, elixir-format
 msgid "Choose Image"
 msgstr ""
@@ -2099,7 +2099,7 @@ msgstr ""
 msgid "Confirm rejection"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3134
+#: lib/klass_hero_web/components/provider_components.ex:3151
 #, elixir-autogen, elixir-format
 msgid "Confirmed"
 msgstr ""
@@ -2119,23 +2119,23 @@ msgstr ""
 msgid "Could not remove invite."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1290
-#: lib/klass_hero_web/components/provider_components.ex:3431
+#: lib/klass_hero_web/components/provider_components.ex:1307
+#: lib/klass_hero_web/components/provider_components.ex:3448
 #, elixir-autogen, elixir-format
 msgid "Cover Image"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1167
+#: lib/klass_hero_web/components/provider_components.ex:1184
 #, elixir-autogen, elixir-format
 msgid "Define age, gender, or grade restrictions for eligible participants."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1283
+#: lib/klass_hero_web/components/provider_components.ex:1300
 #, elixir-autogen, elixir-format
 msgid "Describe your program..."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1282
+#: lib/klass_hero_web/components/provider_components.ex:1299
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:325
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:300
 #, elixir-autogen, elixir-format
@@ -2143,13 +2143,13 @@ msgid "Description"
 msgstr ""
 
 #: lib/klass_hero_web/components/program_components.ex:696
-#: lib/klass_hero_web/components/provider_components.ex:1235
+#: lib/klass_hero_web/components/provider_components.ex:1252
 #: lib/klass_hero_web/live/settings/children_live.ex:635
 #, elixir-autogen, elixir-format
 msgid "Diverse"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3560
+#: lib/klass_hero_web/components/provider_components.ex:3577
 #, elixir-autogen, elixir-format
 msgid "Document Type"
 msgstr ""
@@ -2183,7 +2183,7 @@ msgstr ""
 msgid "Document uploaded successfully."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2850
+#: lib/klass_hero_web/components/provider_components.ex:2867
 #, elixir-autogen, elixir-format
 msgid "Download Template"
 msgstr ""
@@ -2209,24 +2209,24 @@ msgid "End Date"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:1075
-#: lib/klass_hero_web/components/provider_components.ex:1893
+#: lib/klass_hero_web/components/provider_components.ex:1910
 #, elixir-autogen, elixir-format
 msgid "End Time"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2630
-#: lib/klass_hero_web/components/provider_components.ex:3163
+#: lib/klass_hero_web/components/provider_components.ex:2647
+#: lib/klass_hero_web/components/provider_components.ex:3180
 #: lib/klass_hero_web/components/provider_layout_components.ex:612
 #, elixir-autogen, elixir-format
 msgid "Enrolled"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1768
+#: lib/klass_hero_web/components/provider_components.ex:1785
 #, elixir-autogen, elixir-format
 msgid "Enrolled (%{count})"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1116
+#: lib/klass_hero_web/components/provider_components.ex:1133
 #, elixir-autogen, elixir-format
 msgid "Enrollment Capacity (optional)"
 msgstr ""
@@ -2237,7 +2237,7 @@ msgid "Explain why this document is being rejected..."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:74
-#: lib/klass_hero_web/components/provider_components.ex:3164
+#: lib/klass_hero_web/components/provider_components.ex:3181
 #: lib/klass_hero_web/live/admin/emails_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "Failed"
@@ -2270,7 +2270,7 @@ msgid "Family Programs"
 msgstr ""
 
 #: lib/klass_hero_web/components/program_components.ex:694
-#: lib/klass_hero_web/components/provider_components.ex:1234
+#: lib/klass_hero_web/components/provider_components.ex:1251
 #: lib/klass_hero_web/live/settings/children_live.ex:634
 #, elixir-autogen, elixir-format
 msgid "Female"
@@ -2281,12 +2281,12 @@ msgstr ""
 msgid "File"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3493
+#: lib/klass_hero_web/components/provider_components.ex:3510
 #, elixir-autogen, elixir-format
 msgid "File is too large."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3495
+#: lib/klass_hero_web/components/provider_components.ex:3512
 #, elixir-autogen, elixir-format
 msgid "File type not accepted."
 msgstr ""
@@ -2321,7 +2321,7 @@ msgstr ""
 msgid "Grades %{min} – %{max}"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2920
+#: lib/klass_hero_web/components/provider_components.ex:2937
 #, elixir-autogen, elixir-format
 msgid "Guardian Email"
 msgstr ""
@@ -2336,7 +2336,7 @@ msgstr ""
 msgid "ID Document"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2823
+#: lib/klass_hero_web/components/provider_components.ex:2840
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr ""
@@ -2361,7 +2361,7 @@ msgstr ""
 msgid "Invite resent successfully."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1785
+#: lib/klass_hero_web/components/provider_components.ex:1802
 #, elixir-autogen, elixir-format
 msgid "Invites (%{count})"
 msgstr ""
@@ -2371,7 +2371,7 @@ msgstr ""
 msgid "JPG, PNG or WebP. Max 1MB."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1297
+#: lib/klass_hero_web/components/provider_components.ex:1314
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:276
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:366
 #, elixir-autogen, elixir-format
@@ -2393,18 +2393,18 @@ msgstr ""
 msgid "Last Name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1098
+#: lib/klass_hero_web/components/provider_components.ex:1115
 #, elixir-autogen, elixir-format
 msgid "Leave blank for open registration at any time."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1227
+#: lib/klass_hero_web/components/provider_components.ex:1244
 #, elixir-autogen, elixir-format
 msgid "Leave unchecked to allow all genders."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:1031
-#: lib/klass_hero_web/components/provider_components.ex:1905
+#: lib/klass_hero_web/components/provider_components.ex:1922
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr ""
@@ -2416,23 +2416,23 @@ msgid "Logo upload failed. Please try again."
 msgstr ""
 
 #: lib/klass_hero_web/components/program_components.ex:695
-#: lib/klass_hero_web/components/provider_components.ex:1233
+#: lib/klass_hero_web/components/provider_components.ex:1250
 #: lib/klass_hero_web/live/settings/children_live.ex:633
 #, elixir-autogen, elixir-format
 msgid "Male"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1217
+#: lib/klass_hero_web/components/provider_components.ex:1234
 #, elixir-autogen, elixir-format
 msgid "Maximum Age (months)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1131
+#: lib/klass_hero_web/components/provider_components.ex:1148
 #, elixir-autogen, elixir-format
 msgid "Maximum Enrollment"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1272
+#: lib/klass_hero_web/components/provider_components.ex:1289
 #, elixir-autogen, elixir-format
 msgid "Maximum Grade"
 msgstr ""
@@ -2442,17 +2442,17 @@ msgstr ""
 msgid "Meeting Days"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1211
+#: lib/klass_hero_web/components/provider_components.ex:1228
 #, elixir-autogen, elixir-format
 msgid "Minimum Age (months)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1125
+#: lib/klass_hero_web/components/provider_components.ex:1142
 #, elixir-autogen, elixir-format
 msgid "Minimum Enrollment"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1265
+#: lib/klass_hero_web/components/provider_components.ex:1282
 #, elixir-autogen, elixir-format
 msgid "Minimum Grade"
 msgstr ""
@@ -2462,12 +2462,12 @@ msgstr ""
 msgid "No approved documents."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3522
+#: lib/klass_hero_web/components/provider_components.ex:3539
 #, elixir-autogen, elixir-format
 msgid "No documents uploaded yet."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2607
+#: lib/klass_hero_web/components/provider_components.ex:2624
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:447
 #, elixir-autogen, elixir-format
 msgid "No enrollments yet."
@@ -2483,17 +2483,17 @@ msgstr ""
 msgid "No grade"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2874
+#: lib/klass_hero_web/components/provider_components.ex:2891
 #, elixir-autogen, elixir-format
 msgid "No invites yet. Upload a CSV to invite families."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1274
+#: lib/klass_hero_web/components/provider_components.ex:1291
 #, elixir-autogen, elixir-format
 msgid "No maximum"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1267
+#: lib/klass_hero_web/components/provider_components.ex:1284
 #, elixir-autogen, elixir-format
 msgid "No minimum"
 msgstr ""
@@ -2524,7 +2524,7 @@ msgstr ""
 msgid "No verification documents found."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1309
+#: lib/klass_hero_web/components/provider_components.ex:1326
 #, elixir-autogen, elixir-format
 msgid "None (optional)"
 msgstr ""
@@ -2535,7 +2535,7 @@ msgid "Not Verified"
 msgstr ""
 
 #: lib/klass_hero_web/components/program_components.ex:697
-#: lib/klass_hero_web/components/provider_components.ex:1236
+#: lib/klass_hero_web/components/provider_components.ex:1253
 #: lib/klass_hero_web/live/settings/children_live.ex:632
 #, elixir-autogen, elixir-format
 msgid "Not specified"
@@ -2546,7 +2546,7 @@ msgstr ""
 msgid "Our Story"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3598
+#: lib/klass_hero_web/components/provider_components.ex:3615
 #: lib/klass_hero_web/live/provider/verification_live.ex:707
 #: lib/klass_hero_web/live/provider/verification_live.ex:781
 #, elixir-autogen, elixir-format
@@ -2558,12 +2558,12 @@ msgstr ""
 msgid "Participant Requirements"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1164
+#: lib/klass_hero_web/components/provider_components.ex:1181
 #, elixir-autogen, elixir-format
 msgid "Participant Restrictions (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:816
+#: lib/klass_hero_web/components/participation_components.ex:821
 #: lib/klass_hero_web/components/provider_components.ex:332
 #, elixir-autogen, elixir-format
 msgid "Pending Review"
@@ -2573,8 +2573,8 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:121
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:127
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:111
-#: lib/klass_hero_web/live/provider/programs_live.ex:810
-#: lib/klass_hero_web/live/provider/programs_live.ex:879
+#: lib/klass_hero_web/live/provider/programs_live.ex:811
+#: lib/klass_hero_web/live/provider/programs_live.ex:880
 #: lib/klass_hero_web/live/provider/team_live.ex:314
 #: lib/klass_hero_web/live/provider/team_live.ex:357
 #: lib/klass_hero_web/live/provider/team_live.ex:476
@@ -2602,17 +2602,17 @@ msgstr ""
 msgid "Profile updated successfully."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1202
+#: lib/klass_hero_web/components/provider_components.ex:1219
 #, elixir-autogen, elixir-format
 msgid "Program Start"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1398
+#: lib/klass_hero_web/live/provider/programs_live.ex:1399
 #, elixir-autogen, elixir-format
 msgid "Program created successfully."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1402
+#: lib/klass_hero_web/live/provider/programs_live.ex:1403
 #, elixir-autogen, elixir-format
 msgid "Program created, but enrollment capacity could not be saved. Edit the program to retry."
 msgstr ""
@@ -2622,13 +2622,13 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/programs_live.ex:195
 #: lib/klass_hero_web/live/provider/programs_live.ex:318
 #: lib/klass_hero_web/live/provider/programs_live.ex:342
-#: lib/klass_hero_web/live/provider/programs_live.ex:854
-#: lib/klass_hero_web/live/provider/programs_live.ex:986
+#: lib/klass_hero_web/live/provider/programs_live.ex:855
+#: lib/klass_hero_web/live/provider/programs_live.ex:987
 #, elixir-autogen, elixir-format
 msgid "Program not found."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1399
+#: lib/klass_hero_web/live/provider/programs_live.ex:1400
 #, elixir-autogen, elixir-format
 msgid "Program updated successfully."
 msgstr ""
@@ -2645,14 +2645,14 @@ msgstr ""
 msgid "Read our founding story →"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:796
-#: lib/klass_hero_web/components/provider_components.ex:3162
+#: lib/klass_hero_web/components/participation_components.ex:801
+#: lib/klass_hero_web/components/provider_components.ex:3179
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:198
 #, elixir-autogen, elixir-format
 msgid "Registered"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1189
+#: lib/klass_hero_web/components/provider_components.ex:1206
 #, elixir-autogen, elixir-format
 msgid "Registration"
 msgstr ""
@@ -2662,7 +2662,7 @@ msgstr ""
 msgid "Registration Closed"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1109
+#: lib/klass_hero_web/components/provider_components.ex:1126
 #, elixir-autogen, elixir-format
 msgid "Registration Closes"
 msgstr ""
@@ -2672,12 +2672,12 @@ msgstr ""
 msgid "Registration Not Open Yet"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1104
+#: lib/klass_hero_web/components/provider_components.ex:1121
 #, elixir-autogen, elixir-format
 msgid "Registration Opens"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1095
+#: lib/klass_hero_web/components/provider_components.ex:1112
 #, elixir-autogen, elixir-format
 msgid "Registration Period (optional)"
 msgstr ""
@@ -2713,7 +2713,7 @@ msgstr ""
 msgid "Reject"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:818
+#: lib/klass_hero_web/components/participation_components.ex:823
 #: lib/klass_hero_web/components/provider_components.ex:52
 #: lib/klass_hero_web/live/admin/verifications_live.ex:212
 #, elixir-autogen, elixir-format
@@ -2726,15 +2726,15 @@ msgstr ""
 msgid "Rejection reason"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2976
-#: lib/klass_hero_web/components/provider_components.ex:3349
-#: lib/klass_hero_web/components/provider_components.ex:3617
-#: lib/klass_hero_web/components/provider_components.ex:3697
+#: lib/klass_hero_web/components/provider_components.ex:2993
+#: lib/klass_hero_web/components/provider_components.ex:3366
+#: lib/klass_hero_web/components/provider_components.ex:3634
+#: lib/klass_hero_web/components/provider_components.ex:3714
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2969
+#: lib/klass_hero_web/components/provider_components.ex:2986
 #, elixir-autogen, elixir-format
 msgid "Resend Invite"
 msgstr ""
@@ -2749,13 +2749,13 @@ msgstr ""
 msgid "Role"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1714
+#: lib/klass_hero_web/components/provider_components.ex:1731
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:407
 #, elixir-autogen, elixir-format
 msgid "Roster: %{name}"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1326
+#: lib/klass_hero_web/components/provider_components.ex:1343
 #, elixir-autogen, elixir-format
 msgid "Save Program"
 msgstr ""
@@ -2775,7 +2775,7 @@ msgstr ""
 msgid "School Grade (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3595
+#: lib/klass_hero_web/components/provider_components.ex:3612
 #, elixir-autogen, elixir-format
 msgid "Select File"
 msgstr ""
@@ -2786,13 +2786,13 @@ msgstr ""
 msgid "Selected child does not meet the program requirements."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:800
-#: lib/klass_hero_web/live/provider/programs_live.ex:869
+#: lib/klass_hero_web/live/provider/programs_live.ex:801
+#: lib/klass_hero_web/live/provider/programs_live.ex:870
 #, elixir-autogen, elixir-format
 msgid "Selected instructor could not be found. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3161
+#: lib/klass_hero_web/components/provider_components.ex:3178
 #: lib/klass_hero_web/live/admin/emails_live.ex:206
 #, elixir-autogen, elixir-format
 msgid "Sent"
@@ -2803,7 +2803,7 @@ msgstr ""
 msgid "Separate multiple qualifications with commas"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1119
+#: lib/klass_hero_web/components/provider_components.ex:1136
 #, elixir-autogen, elixir-format
 msgid "Set minimum and maximum enrollment for this program."
 msgstr ""
@@ -2832,7 +2832,7 @@ msgid "Start Date"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:1070
-#: lib/klass_hero_web/components/provider_components.ex:1886
+#: lib/klass_hero_web/components/provider_components.ex:1903
 #, elixir-autogen, elixir-format
 msgid "Start Time"
 msgstr ""
@@ -2892,18 +2892,18 @@ msgstr ""
 msgid "This invite cannot be resent."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:861
+#: lib/klass_hero_web/live/provider/programs_live.ex:862
 #, elixir-autogen, elixir-format
 msgid "This program was modified by someone else. Please close and try again."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:995
-#: lib/klass_hero_web/components/provider_components.ex:2182
+#: lib/klass_hero_web/components/provider_components.ex:2199
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3494
+#: lib/klass_hero_web/components/provider_components.ex:3511
 #, elixir-autogen, elixir-format
 msgid "Too many files."
 msgstr ""
@@ -2923,27 +2923,27 @@ msgstr ""
 msgid "Up to Grade %{max}"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2810
+#: lib/klass_hero_web/components/provider_components.ex:2827
 #, elixir-autogen, elixir-format
 msgid "Upload CSV"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3641
+#: lib/klass_hero_web/components/provider_components.ex:3658
 #, elixir-autogen, elixir-format
 msgid "Upload Document"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3549
+#: lib/klass_hero_web/components/provider_components.ex:3566
 #, elixir-autogen, elixir-format
 msgid "Upload New Document"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3497
+#: lib/klass_hero_web/components/provider_components.ex:3514
 #, elixir-autogen, elixir-format
 msgid "Upload error."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3514
+#: lib/klass_hero_web/components/provider_components.ex:3531
 #, elixir-autogen, elixir-format
 msgid "Verification Documents"
 msgstr ""
@@ -3035,7 +3035,7 @@ msgid "Child Safeguarding Training"
 msgstr ""
 
 #: lib/klass_hero_web/components/marketing_components.ex:1507
-#: lib/klass_hero_web/components/provider_components.ex:3870
+#: lib/klass_hero_web/components/provider_components.ex:3887
 #, elixir-autogen, elixir-format
 msgid "Community Standards Agreement"
 msgstr ""
@@ -3105,7 +3105,7 @@ msgstr ""
 msgid "Program fee:"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1175
+#: lib/klass_hero_web/live/provider/programs_live.ex:1176
 #, elixir-autogen, elixir-format
 msgid "Program saved, but the cover image upload failed. You can re-upload it by editing the program."
 msgstr ""
@@ -3186,7 +3186,7 @@ msgid "Vetted with Care"
 msgstr ""
 
 #: lib/klass_hero_web/components/marketing_components.ex:1491
-#: lib/klass_hero_web/components/provider_components.ex:3648
+#: lib/klass_hero_web/components/provider_components.ex:3665
 #, elixir-autogen, elixir-format
 msgid "Video Screening"
 msgstr ""
@@ -3241,7 +3241,7 @@ msgstr ""
 msgid "A reason is required for corrections"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:802
+#: lib/klass_hero_web/components/participation_components.ex:807
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:201
 #, elixir-autogen, elixir-format
 msgid "Absent"
@@ -3360,7 +3360,7 @@ msgstr ""
 msgid "Checked Out"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3011
+#: lib/klass_hero_web/components/provider_components.ex:3028
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:151
 #, elixir-autogen, elixir-format
 msgid "Child"
@@ -3371,7 +3371,7 @@ msgstr ""
 msgid "Coming soon! Sign up for our newsletter to be notified when gift vouchers launch."
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:799
+#: lib/klass_hero_web/components/participation_components.ex:804
 #, elixir-autogen, elixir-format
 msgid "Completed"
 msgstr ""
@@ -3406,7 +3406,7 @@ msgstr ""
 msgid "Download monthly statements for taxes"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2726
+#: lib/klass_hero_web/components/provider_components.ex:2743
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:504
 #, elixir-autogen, elixir-format
 msgid "Enrollment not confirmed"
@@ -3437,7 +3437,7 @@ msgstr ""
 msgid "How does the booking system work?"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:798
+#: lib/klass_hero_web/components/participation_components.ex:803
 #: lib/klass_hero_web/live/admin/sessions_live.ex:271
 #, elixir-autogen, elixir-format
 msgid "In Progress"
@@ -3479,7 +3479,7 @@ msgstr ""
 msgid "No chasing payments or sending invoices"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1737
+#: lib/klass_hero_web/components/provider_components.ex:1754
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:428
 #, elixir-autogen, elixir-format
 msgid "No enrolled parents"
@@ -3490,8 +3490,8 @@ msgstr ""
 msgid "No risk of non-payment"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:821
-#: lib/klass_hero_web/components/provider_components.ex:1906
+#: lib/klass_hero_web/components/participation_components.ex:826
+#: lib/klass_hero_web/components/provider_components.ex:1923
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:155
 #, elixir-autogen, elixir-format
 msgid "Notes"
@@ -3502,7 +3502,7 @@ msgstr ""
 msgid "Or: Request instant payout anytime (minimum €50)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2725
+#: lib/klass_hero_web/components/provider_components.ex:2742
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:503
 #, elixir-autogen, elixir-format
 msgid "Parent account not available"
@@ -3579,7 +3579,7 @@ msgstr ""
 msgid "Save Correction"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:797
+#: lib/klass_hero_web/components/participation_components.ex:802
 #, elixir-autogen, elixir-format
 msgid "Scheduled"
 msgstr ""
@@ -3675,7 +3675,7 @@ msgstr ""
 msgid "You receive instant email with booking details and parent contact info"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:271
+#: lib/klass_hero_web/components/participation_components.ex:276
 #, elixir-autogen, elixir-format
 msgid "%{checked_in} / %{total} checked in"
 msgstr ""
@@ -3720,7 +3720,7 @@ msgstr ""
 msgid "All providers"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:728
+#: lib/klass_hero_web/components/participation_components.ex:733
 #, elixir-autogen, elixir-format
 msgid "Allergies: %{details}"
 msgstr ""
@@ -3768,17 +3768,17 @@ msgstr ""
 msgid "Check-in time must be before check-out time"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:312
+#: lib/klass_hero_web/components/participation_components.ex:317
 #, elixir-autogen, elixir-format
 msgid "Check-in:"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:364
+#: lib/klass_hero_web/components/participation_components.ex:369
 #, elixir-autogen, elixir-format
 msgid "Check-out notes (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:318
+#: lib/klass_hero_web/components/participation_components.ex:323
 #, elixir-autogen, elixir-format
 msgid "Check-out:"
 msgstr ""
@@ -3811,7 +3811,7 @@ msgstr ""
 msgid "Complete Session"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:379
+#: lib/klass_hero_web/components/participation_components.ex:384
 #, elixir-autogen, elixir-format
 msgid "Confirm Check Out"
 msgstr ""
@@ -3846,14 +3846,14 @@ msgstr ""
 msgid "Could not start private conversation"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1927
-#: lib/klass_hero_web/components/provider_components.ex:1988
+#: lib/klass_hero_web/components/provider_components.ex:1944
+#: lib/klass_hero_web/components/provider_components.ex:2005
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:144
 #, elixir-autogen, elixir-format
 msgid "Create Session"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1877
+#: lib/klass_hero_web/components/provider_components.ex:1894
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr ""
@@ -3863,7 +3863,7 @@ msgstr ""
 msgid "Date is required"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:365
+#: lib/klass_hero_web/components/participation_components.ex:370
 #, elixir-autogen, elixir-format
 msgid "E.g., picked up by parent, gave medication reminder..."
 msgstr ""
@@ -3896,7 +3896,7 @@ msgstr ""
 msgid "Emails"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:740
+#: lib/klass_hero_web/components/participation_components.ex:745
 #, elixir-autogen, elixir-format
 msgid "Emergency: %{details}"
 msgstr ""
@@ -3906,7 +3906,7 @@ msgstr ""
 msgid "End time must be after start time"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:803
+#: lib/klass_hero_web/components/participation_components.ex:808
 #, elixir-autogen, elixir-format
 msgid "Expected"
 msgstr ""
@@ -3962,7 +3962,7 @@ msgstr ""
 msgid "Go to Home"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:297
+#: lib/klass_hero_web/components/participation_components.ex:302
 #, elixir-autogen, elixir-format
 msgid "In: %{time}"
 msgstr ""
@@ -4029,7 +4029,7 @@ msgstr ""
 msgid "Mark Unread"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1907
+#: lib/klass_hero_web/components/provider_components.ex:1924
 #, elixir-autogen, elixir-format
 msgid "Max Capacity"
 msgstr ""
@@ -4040,7 +4040,7 @@ msgstr ""
 msgid "No actions available"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:409
+#: lib/klass_hero_web/components/participation_components.ex:414
 #, elixir-autogen, elixir-format
 msgid "No children enrolled in this session"
 msgstr ""
@@ -4076,17 +4076,17 @@ msgstr ""
 msgid "No sessions scheduled"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:644
+#: lib/klass_hero_web/components/participation_components.ex:649
 #, elixir-autogen, elixir-format
 msgid "Note:"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:471
+#: lib/klass_hero_web/components/participation_components.ex:476
 #, elixir-autogen, elixir-format
 msgid "Observation about the child's participation..."
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:303
+#: lib/klass_hero_web/components/participation_components.ex:308
 #, elixir-autogen, elixir-format
 msgid "Out: %{time}"
 msgstr ""
@@ -4112,9 +4112,9 @@ msgstr ""
 msgid "Please fill in all required fields"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1858
-#: lib/klass_hero_web/components/provider_components.ex:1867
-#: lib/klass_hero_web/components/provider_components.ex:2917
+#: lib/klass_hero_web/components/provider_components.ex:1875
+#: lib/klass_hero_web/components/provider_components.ex:1884
+#: lib/klass_hero_web/components/provider_components.ex:2934
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:24
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:136
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:299
@@ -4183,7 +4183,7 @@ msgstr ""
 msgid "Reset to today"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:502
+#: lib/klass_hero_web/components/participation_components.ex:507
 #, elixir-autogen, elixir-format
 msgid "Resubmit Note"
 msgstr ""
@@ -4193,12 +4193,12 @@ msgstr ""
 msgid "Retry"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:500
+#: lib/klass_hero_web/components/participation_components.ex:505
 #, elixir-autogen, elixir-format
 msgid "Revised Note"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1868
+#: lib/klass_hero_web/components/provider_components.ex:1885
 #, elixir-autogen, elixir-format
 msgid "Select a program..."
 msgstr ""
@@ -4222,7 +4222,7 @@ msgstr ""
 msgid "Session"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:268
+#: lib/klass_hero_web/components/participation_components.ex:273
 #, elixir-autogen, elixir-format
 msgid "Session Roster"
 msgstr ""
@@ -4244,12 +4244,12 @@ msgstr ""
 msgid "Start Session"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:472
+#: lib/klass_hero_web/components/participation_components.ex:477
 #, elixir-autogen, elixir-format
 msgid "Submit Note"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:734
+#: lib/klass_hero_web/components/participation_components.ex:739
 #, elixir-autogen, elixir-format
 msgid "Support: %{details}"
 msgstr ""
@@ -4303,7 +4303,7 @@ msgstr ""
 msgid "Unread"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:501
+#: lib/klass_hero_web/components/participation_components.ex:506
 #, elixir-autogen, elixir-format
 msgid "Update your observation..."
 msgstr ""
@@ -4404,7 +4404,7 @@ msgstr ""
 msgid "Built for the Berlin international community. Integrated secure encrypted messaging to connect with local families and trusted educators nearby."
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:804
+#: lib/klass_hero_web/components/participation_components.ex:809
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
 msgstr ""
@@ -4553,41 +4553,41 @@ msgstr ""
 msgid "for"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2016
+#: lib/klass_hero_web/components/provider_components.ex:2033
 #, elixir-autogen, elixir-format
 msgid "Assigned staff"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2017
+#: lib/klass_hero_web/components/provider_components.ex:2034
 #, elixir-autogen, elixir-format
 msgid "Attendance"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1990
-#: lib/klass_hero_web/components/provider_components.ex:2110
-#: lib/klass_hero_web/components/provider_components.ex:2258
-#: lib/klass_hero_web/components/provider_components.ex:2407
+#: lib/klass_hero_web/components/provider_components.ex:2007
+#: lib/klass_hero_web/components/provider_components.ex:2127
+#: lib/klass_hero_web/components/provider_components.ex:2275
+#: lib/klass_hero_web/components/provider_components.ex:2424
 #: lib/klass_hero_web/live/provider/overview_live.ex:403
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2015
+#: lib/klass_hero_web/components/provider_components.ex:2032
 #, elixir-autogen, elixir-format
 msgid "Date / time"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2009
+#: lib/klass_hero_web/components/provider_components.ex:2026
 #, elixir-autogen, elixir-format
 msgid "No sessions scheduled yet."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1972
+#: lib/klass_hero_web/components/provider_components.ex:1989
 #, elixir-autogen, elixir-format
 msgid "Sessions — %{title}"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1548
+#: lib/klass_hero_web/components/provider_components.ex:1565
 #, elixir-autogen, elixir-format
 msgid "View sessions"
 msgstr ""
@@ -4597,12 +4597,12 @@ msgstr ""
 msgid "Create a program before inviting participants."
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:801
+#: lib/klass_hero_web/components/participation_components.ex:806
 #, elixir-autogen, elixir-format
 msgid "Departed"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:820
+#: lib/klass_hero_web/components/participation_components.ex:825
 #, elixir-autogen, elixir-format
 msgid "Departure notes"
 msgstr ""
@@ -4619,17 +4619,17 @@ msgstr ""
 msgid "Failed to update record"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3075
+#: lib/klass_hero_web/components/provider_components.ex:3092
 #, elixir-autogen, elixir-format
 msgid "Grade"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2748
+#: lib/klass_hero_web/components/provider_components.ex:2765
 #, elixir-autogen, elixir-format
 msgid "Invite mode"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2767
+#: lib/klass_hero_web/components/provider_components.ex:2784
 #, elixir-autogen, elixir-format
 msgid "Invite one person"
 msgstr ""
@@ -4639,17 +4639,17 @@ msgstr ""
 msgid "Invite sent."
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:590
+#: lib/klass_hero_web/components/participation_components.ex:595
 #, elixir-autogen, elixir-format
 msgid "Leave blank to keep this child marked as present."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3088
+#: lib/klass_hero_web/components/provider_components.ex:3105
 #, elixir-autogen, elixir-format
 msgid "Medical & consents (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3094
+#: lib/klass_hero_web/components/provider_components.ex:3111
 #, elixir-autogen, elixir-format
 msgid "Medical conditions"
 msgstr ""
@@ -4660,27 +4660,27 @@ msgstr ""
 msgid "Nothing to update"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3096
+#: lib/klass_hero_web/components/provider_components.ex:3113
 #, elixir-autogen, elixir-format
 msgid "Nut allergy"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3100
+#: lib/klass_hero_web/components/provider_components.ex:3117
 #, elixir-autogen, elixir-format
 msgid "Photos may appear in marketing materials"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3105
+#: lib/klass_hero_web/components/provider_components.ex:3122
 #, elixir-autogen, elixir-format
 msgid "Photos may appear on social media"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:800
+#: lib/klass_hero_web/components/participation_components.ex:805
 #, elixir-autogen, elixir-format
 msgid "Present"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3032
+#: lib/klass_hero_web/components/provider_components.ex:3049
 #, elixir-autogen, elixir-format
 msgid "Primary guardian"
 msgstr ""
@@ -4691,7 +4691,7 @@ msgstr ""
 msgid "Record departure"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:587
+#: lib/klass_hero_web/components/participation_components.ex:592
 #, elixir-autogen, elixir-format
 msgid "Record departure time (optional)"
 msgstr ""
@@ -4702,37 +4702,37 @@ msgstr ""
 msgid "Record updated"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:604
+#: lib/klass_hero_web/components/participation_components.ex:609
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3069
+#: lib/klass_hero_web/components/provider_components.ex:3086
 #, elixir-autogen, elixir-format
 msgid "School (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3079
+#: lib/klass_hero_web/components/provider_components.ex:3096
 #, elixir-autogen, elixir-format
 msgid "School name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3053
+#: lib/klass_hero_web/components/provider_components.ex:3070
 #, elixir-autogen, elixir-format
 msgid "Second guardian (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3122
+#: lib/klass_hero_web/components/provider_components.ex:3139
 #, elixir-autogen, elixir-format
 msgid "Send invite"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:579
+#: lib/klass_hero_web/components/participation_components.ex:584
 #, elixir-autogen, elixir-format
 msgid "Update the note for this child (e.g. clarify what happened)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2785
+#: lib/klass_hero_web/components/provider_components.ex:2802
 #, elixir-autogen, elixir-format
 msgid "Upload a list"
 msgstr ""
@@ -4832,7 +4832,7 @@ msgstr ""
 msgid "Property Damage"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1585
+#: lib/klass_hero_web/components/provider_components.ex:1602
 #, elixir-autogen, elixir-format
 msgid "Report Incident"
 msgstr ""
@@ -5500,7 +5500,7 @@ msgstr[1] ""
 msgid "In 2025, Shane connected with his friend"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1594
+#: lib/klass_hero_web/components/provider_components.ex:1611
 #: lib/klass_hero_web/live/provider/incident_reports_live.ex:43
 #: lib/klass_hero_web/live/provider/incident_reports_live.ex:72
 #, elixir-autogen, elixir-format
@@ -5570,7 +5570,7 @@ msgstr ""
 msgid "Last 8 weeks"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1307
+#: lib/klass_hero_web/components/provider_components.ex:1324
 #: lib/klass_hero_web/presenters/hero_cards_presenter.ex:27
 #, elixir-autogen, elixir-format
 msgid "Lead Instructor"
@@ -5677,7 +5677,7 @@ msgstr ""
 msgid "Mandatory child-protection course before going live."
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:536
+#: lib/klass_hero_web/components/participation_components.ex:541
 #: lib/klass_hero_web/components/provider_layout_components.ex:578
 #: lib/klass_hero_web/live/provider/participation_live.html.heex:164
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:141
@@ -6009,17 +6009,17 @@ msgstr ""
 msgid "Rigorous screening so families never wonder who's leading the room."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3170
+#: lib/klass_hero_web/components/provider_components.ex:3187
 #, elixir-autogen, elixir-format
 msgid "Row %{row}"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3170
+#: lib/klass_hero_web/components/provider_components.ex:3187
 #, elixir-autogen, elixir-format
 msgid "Row —"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2862
+#: lib/klass_hero_web/components/provider_components.ex:2879
 #, elixir-autogen, elixir-format
 msgid "Rows with errors"
 msgstr ""
@@ -6749,12 +6749,12 @@ msgstr ""
 msgid "Experience validation"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3678
+#: lib/klass_hero_web/components/provider_components.ex:3695
 #, elixir-autogen, elixir-format
 msgid "MP4, MOV or WEBM. Max 100MB."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3651
+#: lib/klass_hero_web/components/provider_components.ex:3668
 #, elixir-autogen, elixir-format
 msgid "Record a short video introducing yourself. Our team reviews it to assess communication skills and alignment with our values."
 msgstr ""
@@ -6764,12 +6764,12 @@ msgstr ""
 msgid "Safeguarding certificate"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3675
+#: lib/klass_hero_web/components/provider_components.ex:3692
 #, elixir-autogen, elixir-format
 msgid "Select Video"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3721
+#: lib/klass_hero_web/components/provider_components.ex:3738
 #, elixir-autogen, elixir-format
 msgid "Upload Video"
 msgstr ""
@@ -6779,7 +6779,7 @@ msgstr ""
 msgid "Your browser does not support video playback."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3874
+#: lib/klass_hero_web/components/provider_components.ex:3891
 #, elixir-autogen, elixir-format
 msgid "Confirm agreement"
 msgstr ""
@@ -6789,12 +6789,12 @@ msgstr ""
 msgid "Couldn't record your agreement. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3897
+#: lib/klass_hero_web/components/provider_components.ex:3914
 #, elixir-autogen, elixir-format
 msgid "Download the agreement (PDF)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3873
+#: lib/klass_hero_web/components/provider_components.ex:3890
 #, elixir-autogen, elixir-format
 msgid "I have read and agree to the Klass Hero Community Guidelines."
 msgstr ""
@@ -6804,7 +6804,7 @@ msgstr ""
 msgid "Please confirm you have read and agree to the Community Guidelines."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3776
+#: lib/klass_hero_web/components/provider_components.ex:3793
 #, elixir-autogen, elixir-format
 msgid "Signed by %{name} on %{date} (v%{version})."
 msgstr ""
@@ -6814,17 +6814,17 @@ msgstr ""
 msgid "Thanks — your agreement to the Community Guidelines has been recorded."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3882
+#: lib/klass_hero_web/components/provider_components.ex:3899
 #, elixir-autogen, elixir-format
 msgid "The Community Guidelines have been updated since you last agreed (v%{old}). Please review and re-agree."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3871
+#: lib/klass_hero_web/components/provider_components.ex:3888
 #, elixir-autogen, elixir-format
 msgid "The final step: read and agree to the Klass Hero Community Guidelines."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3872
+#: lib/klass_hero_web/components/provider_components.ex:3889
 #, elixir-autogen, elixir-format
 msgid "You have agreed to the Community Guidelines."
 msgstr ""
@@ -7093,12 +7093,12 @@ msgstr ""
 msgid "Your insurance is verified."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3820
+#: lib/klass_hero_web/components/provider_components.ex:3837
 #, elixir-autogen, elixir-format
 msgid "Signing as %{name} on behalf of the business."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3929
+#: lib/klass_hero_web/components/provider_components.ex:3946
 #, elixir-autogen, elixir-format
 msgid "Confirm, on behalf of your business, that all staff are vetted per German child-safety law."
 msgstr ""
@@ -7108,7 +7108,7 @@ msgstr ""
 msgid "Couldn't record your declaration. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3935
+#: lib/klass_hero_web/components/provider_components.ex:3952
 #, elixir-autogen, elixir-format
 msgid "I confirm, on behalf of the business, that the above declaration is true and I am authorised to sign it."
 msgstr ""
@@ -7118,17 +7118,17 @@ msgstr ""
 msgid "Please confirm the declaration before signing."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3960
+#: lib/klass_hero_web/components/provider_components.ex:3977
 #, elixir-autogen, elixir-format
 msgid "Provisional text — pending review by a German-qualified lawyer before go-live."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3939
+#: lib/klass_hero_web/components/provider_components.ex:3956
 #, elixir-autogen, elixir-format
 msgid "Sign the declaration"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3927
+#: lib/klass_hero_web/components/provider_components.ex:3944
 #, elixir-autogen, elixir-format
 msgid "Staff Compliance Declaration"
 msgstr ""
@@ -7138,17 +7138,17 @@ msgstr ""
 msgid "Thanks — your Staff Compliance Declaration has been recorded."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3947
+#: lib/klass_hero_web/components/provider_components.ex:3964
 #, elixir-autogen, elixir-format
 msgid "The Staff Compliance Declaration has been updated since you last signed (v%{old}). Please review and re-sign."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3933
+#: lib/klass_hero_web/components/provider_components.ex:3950
 #, elixir-autogen, elixir-format
 msgid "You have signed the Staff Compliance Declaration."
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:470
+#: lib/klass_hero_web/components/participation_components.ex:475
 #, elixir-autogen, elixir-format
 msgid "Session Note"
 msgstr ""
@@ -7210,15 +7210,15 @@ msgstr ""
 msgid "Undelivered Events"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2352
-#: lib/klass_hero_web/components/provider_components.ex:2530
+#: lib/klass_hero_web/components/provider_components.ex:2369
+#: lib/klass_hero_web/components/provider_components.ex:2547
 #: lib/klass_hero_web/live/user_live/settings.ex:292
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2280
-#: lib/klass_hero_web/components/provider_components.ex:2461
+#: lib/klass_hero_web/components/provider_components.ex:2297
+#: lib/klass_hero_web/components/provider_components.ex:2478
 #, elixir-autogen, elixir-format
 msgid "Lead"
 msgstr ""
@@ -7228,17 +7228,17 @@ msgstr ""
 msgid "Lead instructor updated."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2292
+#: lib/klass_hero_web/components/provider_components.ex:2309
 #, elixir-autogen, elixir-format
 msgid "Make lead instructor"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1562
+#: lib/klass_hero_web/components/provider_components.ex:1579
 #, elixir-autogen, elixir-format
 msgid "Manage Staffing"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2321
+#: lib/klass_hero_web/components/provider_components.ex:2338
 #, elixir-autogen, elixir-format
 msgid "Nobody is on this program yet."
 msgstr ""
@@ -7249,19 +7249,19 @@ msgstr ""
 msgid "Pick a staff member to add."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2304
-#: lib/klass_hero_web/components/provider_components.ex:2569
+#: lib/klass_hero_web/components/provider_components.ex:2321
+#: lib/klass_hero_web/components/provider_components.ex:2586
 #, elixir-autogen, elixir-format
 msgid "Reassign the lead before removing them"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2305
+#: lib/klass_hero_web/components/provider_components.ex:2322
 #, elixir-autogen, elixir-format
 msgid "Remove from program"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2340
-#: lib/klass_hero_web/components/provider_components.ex:2517
+#: lib/klass_hero_web/components/provider_components.ex:2357
+#: lib/klass_hero_web/components/provider_components.ex:2534
 #, elixir-autogen, elixir-format
 msgid "Select a staff member…"
 msgstr ""
@@ -7276,17 +7276,17 @@ msgstr ""
 msgid "Staff member removed from the program."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2357
+#: lib/klass_hero_web/components/provider_components.ex:2374
 #, elixir-autogen, elixir-format
 msgid "Staff you add can read and reply to this program's parent conversations."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2256
+#: lib/klass_hero_web/components/provider_components.ex:2273
 #, elixir-autogen, elixir-format
 msgid "Staffing — %{title}"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1134
+#: lib/klass_hero_web/live/provider/programs_live.ex:1135
 #, elixir-autogen, elixir-format
 msgid "That staff member could not be found."
 msgstr ""
@@ -7301,7 +7301,7 @@ msgstr ""
 msgid "This person is the lead instructor. Make someone else lead before removing them."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1506
+#: lib/klass_hero_web/components/provider_components.ex:1523
 #, elixir-autogen, elixir-format
 msgid "%{count} staff member · no lead"
 msgid_plural "%{count} staff · no lead"
@@ -7358,17 +7358,17 @@ msgstr ""
 msgid "This person has a history here now — use 'Remove from team' instead."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1412
+#: lib/klass_hero_web/live/provider/programs_live.ex:1413
 #, elixir-autogen, elixir-format
 msgid "Program created, but some settings could not be saved. Please review the program's limits."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1416
+#: lib/klass_hero_web/live/provider/programs_live.ex:1417
 #, elixir-autogen, elixir-format
 msgid "Program updated, but some settings could not be saved. Please review the program's limits."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1406
+#: lib/klass_hero_web/live/provider/programs_live.ex:1407
 #, elixir-autogen, elixir-format
 msgid "Program updated, but the enrollment capacity was rejected. The previous limits still apply."
 msgstr ""
@@ -7380,17 +7380,17 @@ msgid_plural "%{count} children are already enrolled. Confirm you want this prog
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1149
+#: lib/klass_hero_web/components/provider_components.ex:1166
 #, elixir-autogen, elixir-format
 msgid "Anyone will be able to book a place until you set a new maximum."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1154
+#: lib/klass_hero_web/components/provider_components.ex:1171
 #, elixir-autogen, elixir-format
 msgid "I understand this program will have no capacity limit."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2557
+#: lib/klass_hero_web/components/provider_components.ex:2574
 #, elixir-autogen, elixir-format
 msgid "Go back to the program's usual team"
 msgstr ""
@@ -7400,17 +7400,17 @@ msgstr ""
 msgid "Lead instructor for this session updated."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2476
+#: lib/klass_hero_web/components/provider_components.ex:2493
 #, elixir-autogen, elixir-format
 msgid "Make lead instructor for this session"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2498
+#: lib/klass_hero_web/components/provider_components.ex:2515
 #, elixir-autogen, elixir-format
 msgid "Nobody is working this session yet."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2574
+#: lib/klass_hero_web/components/provider_components.ex:2591
 #, elixir-autogen, elixir-format
 msgid "Remove from this session"
 msgstr ""
@@ -7430,7 +7430,7 @@ msgstr ""
 msgid "Staffing"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2400
+#: lib/klass_hero_web/components/provider_components.ex:2417
 #, elixir-autogen, elixir-format
 msgid "Staffing — %{date}"
 msgstr ""
@@ -7461,22 +7461,22 @@ msgstr ""
 msgid "A session needs at least one person. Use “Go back to the program's usual team” to drop this session's own roster."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2572
+#: lib/klass_hero_web/components/provider_components.ex:2589
 #, elixir-autogen, elixir-format
 msgid "A session needs someone — use “Go back to the program's usual team” instead"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2539
+#: lib/klass_hero_web/components/provider_components.ex:2556
 #, elixir-autogen, elixir-format
 msgid "Everyone on your team is already working this session."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2432
+#: lib/klass_hero_web/components/provider_components.ex:2449
 #, elixir-autogen, elixir-format
 msgid "Staffed just for this session. Changes here do not touch the program."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2434
+#: lib/klass_hero_web/components/provider_components.ex:2451
 #, elixir-autogen, elixir-format
 msgid "Using the program's usual team. The first change here copies them onto this session, so later program changes stop reaching it."
 msgstr ""
@@ -7486,17 +7486,17 @@ msgstr ""
 msgid "(optional)"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2175
+#: lib/klass_hero_web/components/provider_components.ex:2192
 #, elixir-autogen, elixir-format
 msgid "Add a waiver"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2207
+#: lib/klass_hero_web/components/provider_components.ex:2224
 #, elixir-autogen, elixir-format
 msgid "Add waiver"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:987
+#: lib/klass_hero_web/live/provider/programs_live.ex:988
 #, elixir-autogen, elixir-format
 msgid "Check the waiver details and try again."
 msgstr ""
@@ -7513,22 +7513,22 @@ msgstr ""
 msgid "I have read and agree to %{title}"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2189
+#: lib/klass_hero_web/components/provider_components.ex:2206
 #, elixir-autogen, elixir-format
 msgid "Legal text"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1569
+#: lib/klass_hero_web/components/provider_components.ex:1586
 #, elixir-autogen, elixir-format
 msgid "Manage Waivers"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2117
+#: lib/klass_hero_web/components/provider_components.ex:2134
 #, elixir-autogen, elixir-format
 msgid "No waivers yet. Parents enrol without signing anything."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2196
+#: lib/klass_hero_web/components/provider_components.ex:2213
 #, elixir-autogen, elixir-format
 msgid "Parents must sign this before enrolling"
 msgstr ""
@@ -7548,17 +7548,17 @@ msgstr ""
 msgid "Please tick a waiver to sign it."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2174
+#: lib/klass_hero_web/components/provider_components.ex:2191
 #, elixir-autogen, elixir-format
 msgid "Publish a new version"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2207
+#: lib/klass_hero_web/components/provider_components.ex:2224
 #, elixir-autogen, elixir-format
 msgid "Publish version"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2200
+#: lib/klass_hero_web/components/provider_components.ex:2217
 #, elixir-autogen, elixir-format
 msgid "Publishing keeps every earlier version on record; signatures already given stay bound to the wording they were shown."
 msgstr ""
@@ -7568,12 +7568,12 @@ msgstr ""
 msgid "Required"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2151
+#: lib/klass_hero_web/components/provider_components.ex:2168
 #, elixir-autogen, elixir-format
 msgid "Retire this waiver"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2142
+#: lib/klass_hero_web/components/provider_components.ex:2159
 #, elixir-autogen, elixir-format
 msgid "Revise text"
 msgstr ""
@@ -7588,7 +7588,7 @@ msgstr ""
 msgid "Sign waivers"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2674
+#: lib/klass_hero_web/components/provider_components.ex:2691
 #: lib/klass_hero_web/live/enrollment_waivers_live.ex:149
 #, elixir-autogen, elixir-format
 msgid "Signed"
@@ -7604,12 +7604,12 @@ msgstr ""
 msgid "There is nothing to sign for this enrollment."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2674
+#: lib/klass_hero_web/components/provider_components.ex:2691
 #, elixir-autogen, elixir-format
 msgid "Unsigned"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2134
+#: lib/klass_hero_web/components/provider_components.ex:2151
 #, elixir-autogen, elixir-format
 msgid "Version %{number}"
 msgstr ""
@@ -7619,7 +7619,7 @@ msgstr ""
 msgid "Waiver not found."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2627
+#: lib/klass_hero_web/components/provider_components.ex:2644
 #: lib/klass_hero_web/live/booking_live.ex:447
 #: lib/klass_hero_web/live/enrollment_waivers_live.ex:33
 #: lib/klass_hero_web/live/enrollment_waivers_live.ex:105
@@ -7632,7 +7632,7 @@ msgstr ""
 msgid "Waivers waiting for your signature"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2108
+#: lib/klass_hero_web/components/provider_components.ex:2125
 #, elixir-autogen, elixir-format
 msgid "Waivers — %{title}"
 msgstr ""
@@ -7642,17 +7642,17 @@ msgstr ""
 msgid "this program"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:984
+#: lib/klass_hero_web/live/provider/programs_live.ex:985
 #, elixir-autogen, elixir-format
 msgid "New version published. It applies to future enrolments."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2155
+#: lib/klass_hero_web/components/provider_components.ex:2172
 #, elixir-autogen, elixir-format
 msgid "Retire \"%{title}\"? Parents will no longer be asked to sign it. Signatures already collected are kept."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:983
+#: lib/klass_hero_web/live/provider/programs_live.ex:984
 #, elixir-autogen, elixir-format
 msgid "Waiver added."
 msgstr ""
@@ -7723,7 +7723,7 @@ msgstr ""
 msgid "This is your main provider identity. Verification is required to list programs."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3517
+#: lib/klass_hero_web/components/provider_components.ex:3534
 #, elixir-autogen, elixir-format
 msgid "Upload documents to be verified. Documents are reviewed by our team."
 msgstr ""
@@ -7867,8 +7867,8 @@ msgstr ""
 msgid "Review invitations"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2938
-#: lib/klass_hero_web/components/provider_components.ex:2945
+#: lib/klass_hero_web/components/provider_components.ex:2955
+#: lib/klass_hero_web/components/provider_components.ex:2962
 #, elixir-autogen, elixir-format
 msgid "Unknown program"
 msgstr ""
@@ -7933,17 +7933,17 @@ msgstr ""
 msgid "N/A"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3425
+#: lib/klass_hero_web/components/provider_components.ex:3442
 #, elixir-autogen, elixir-format
 msgid "A short line that sums you up"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3414
+#: lib/klass_hero_web/components/provider_components.ex:3431
 #, elixir-autogen, elixir-format
 msgid "Branding & Presence"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3438
+#: lib/klass_hero_web/components/provider_components.ex:3455
 #, elixir-autogen, elixir-format
 msgid "Choose Cover Image"
 msgstr ""
@@ -7953,22 +7953,22 @@ msgstr ""
 msgid "Cover image upload failed. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3439
+#: lib/klass_hero_web/components/provider_components.ex:3456
 #, elixir-autogen, elixir-format
 msgid "JPG, PNG or WebP. Max 5MB."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3417
+#: lib/klass_hero_web/components/provider_components.ex:3434
 #, elixir-autogen, elixir-format
 msgid "Shown on your public profile page."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3424
+#: lib/klass_hero_web/components/provider_components.ex:3441
 #, elixir-autogen, elixir-format
 msgid "Tagline"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:335
+#: lib/klass_hero_web/components/participation_components.ex:340
 #, elixir-autogen, elixir-format
 msgid "Absent:"
 msgstr ""
@@ -7989,12 +7989,12 @@ msgstr ""
 msgid "Failed to mark absent: %{reason}"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:534
+#: lib/klass_hero_web/components/participation_components.ex:539
 #, elixir-autogen, elixir-format
 msgid "Reason for absence (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:535
+#: lib/klass_hero_web/components/participation_components.ex:540
 #, elixir-autogen, elixir-format
 msgid "e.g. Mum called — off sick today"
 msgstr ""
@@ -8009,7 +8009,7 @@ msgstr ""
 msgid "Klass Hero on %{network}"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3496
+#: lib/klass_hero_web/components/provider_components.ex:3513
 #, elixir-autogen, elixir-format
 msgid "Upload failed."
 msgstr ""
@@ -8049,7 +8049,7 @@ msgstr ""
 msgid "A newly chosen cover or logo appears here after you save."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3469
+#: lib/klass_hero_web/components/provider_components.ex:3486
 #, elixir-autogen, elixir-format
 msgid "Add %{network}"
 msgstr ""
@@ -8069,7 +8069,7 @@ msgstr ""
 msgid "Show preview"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3456
+#: lib/klass_hero_web/components/provider_components.ex:3473
 #, elixir-autogen, elixir-format
 msgid "e.g. %{example}"
 msgstr ""
@@ -8206,12 +8206,12 @@ msgstr ""
 msgid "%{roster} of %{capacity}"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:196
+#: lib/klass_hero_web/components/participation_components.ex:201
 #, elixir-autogen, elixir-format
 msgid "More children are on this session's roster than its capacity allows"
 msgstr ""
 
-#: lib/klass_hero_web/components/participation_components.ex:199
+#: lib/klass_hero_web/components/participation_components.ex:204
 #, elixir-autogen, elixir-format
 msgid "Over capacity"
 msgstr ""
@@ -8222,7 +8222,7 @@ msgstr ""
 msgid "Edit Session"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1970
+#: lib/klass_hero_web/components/provider_components.ex:1987
 #, elixir-autogen, elixir-format
 msgid "New session — %{title}"
 msgstr ""
@@ -8247,7 +8247,7 @@ msgstr ""
 msgid "That session could not be saved."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:1900
+#: lib/klass_hero_web/components/provider_components.ex:1917
 #, elixir-autogen, elixir-format
 msgid "The date and time are fixed once a session has started — its attendance records are keyed to it."
 msgstr ""
@@ -8255,4 +8255,14 @@ msgstr ""
 #: lib/klass_hero_web/helpers/session_form_handlers.ex:183
 #, elixir-autogen, elixir-format
 msgid "The date and time are fixed once a session has started."
+msgstr ""
+
+#: lib/klass_hero_web/components/provider_components.ex:1104
+#, elixir-autogen, elixir-format
+msgid "How many children fit in one session. Applied to sessions created from this schedule; a session you add by hand keeps its own number."
+msgstr ""
+
+#: lib/klass_hero_web/components/provider_components.ex:1100
+#, elixir-autogen, elixir-format
+msgid "Usual capacity per session"
 msgstr ""

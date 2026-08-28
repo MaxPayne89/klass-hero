@@ -36,6 +36,14 @@ defmodule KlassHero.Participation.ProgramSession do
     # manual create path can never claim a session was schedule-derived.
     field :origin, Ecto.Enum, values: [:generated, :manual], default: :manual
 
+    # Whether `max_capacity` is the Program's default or a number a human chose
+    # for this one date. Also absent from both changesets, and for the same
+    # reason: it records what a write *meant*, so only the write path may set it.
+    # `Participation.update_session/3` flips it to `:explicit` when a caller
+    # supplies a capacity, and the generation sweep only realigns `:inherited`
+    # rows — that is what keeps a provider's one-off from being swept away.
+    field :capacity_source, Ecto.Enum, values: [:inherited, :explicit], default: :inherited
+
     has_many :participation_records, ParticipationRecord, foreign_key: :session_id
 
     timestamps(type: :utc_datetime)

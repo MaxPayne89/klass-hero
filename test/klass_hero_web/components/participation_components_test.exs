@@ -65,6 +65,30 @@ defmodule KlassHeroWeb.ParticipationComponentsTest do
       assert html =~ "Over capacity"
     end
 
+    test "does not mark a cancelled session, whose roster no longer means anything", %{
+      session: session
+    } do
+      html =
+        render_component(&ParticipationComponents.participation_card/1,
+          session: %{session | max_capacity: 5, status: :cancelled},
+          role: :provider,
+          attendance: %{roster: 6, checked_in: 0}
+        )
+
+      refute html =~ "Over capacity"
+    end
+
+    test "still marks a completed session, whose overflow is real history", %{session: session} do
+      html =
+        render_component(&ParticipationComponents.participation_card/1,
+          session: %{session | max_capacity: 5, status: :completed},
+          role: :provider,
+          attendance: %{roster: 6, checked_in: 6}
+        )
+
+      assert html =~ "Over capacity"
+    end
+
     test "does not mark a session sitting exactly at its Session Capacity", %{session: session} do
       html =
         render_component(&ParticipationComponents.participation_card/1,

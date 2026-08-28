@@ -12,6 +12,7 @@ defmodule KlassHero.Participation.SyncSessionsForProgramTest do
   import Ecto.Query
   import KlassHero.Factory
 
+  alias KlassHero.Accounts.Scope
   alias KlassHero.Participation
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Repo
@@ -40,12 +41,91 @@ defmodule KlassHero.Participation.SyncSessionsForProgramTest do
     )
   end
 
+  # Written straight to the row: the facade path is covered in
+  # update_program_integration_test.exs, and this file is about what sync reads.
+  defp set_default_capacity(program, capacity) do
+    from(p in "programs", where: p.id == type(^program.id, :binary_id))
+    |> Repo.update_all(set: [default_session_capacity: capacity])
+  end
+
   defp sessions_for(program_id) do
     from(s in ProgramSession, where: s.program_id == ^program_id, order_by: [asc: s.session_date])
     |> Repo.all()
   end
 
   describe "sync_sessions_for_program/1" do
+    test "a generated session inherits the program's default Session Capacity" do
+      program = fortnightly_program(default_session_capacity: 12)
+
+      assert {:ok, %{generated: 2}} = Participation.sync_sessions_for_program(program.id)
+
+      assert [first, second] = sessions_for(program.id)
+      assert first.max_capacity == 12
+      assert second.max_capacity == 12
+    end
+
+    test "changing the default realigns sessions already generated" do
+      # The reason capacity is realigned rather than only seeded: the insert uses
+      # `on_conflict: :nothing`, so a value copied at creation would be frozen and
+      # a provider raising their capacity would see nothing change.
+      program = fortnightly_program(default_session_capacity: 12)
+      assert {:ok, %{generated: 2}} = Participation.sync_sessions_for_program(program.id)
+
+      set_default_capacity(program, 8)
+
+      assert {:ok, _} = Participation.sync_sessions_for_program(program.id)
+
+      assert Enum.all?(sessions_for(program.id), &(&1.max_capacity == 8))
+    end
+
+    test "a capacity set by hand on a generated session survives a later sync" do
+      # A provider can tune one date through the session edit form
+      # (`ParticipationLive` -> `update_session/3`), and that number must outlive
+      # every later program write. Realignment fills in what a Program dictates;
+      # it does not overrule what a human decided about one date.
+      provider = insert(:provider_profile_schema)
+
+      program =
+        fortnightly_program(default_session_capacity: 12, provider_id: provider.id)
+
+      assert {:ok, %{generated: 2}} = Participation.sync_sessions_for_program(program.id)
+
+      [generated | _] = sessions_for(program.id)
+
+      {:ok, edited} =
+        Participation.update_session(%Scope{provider: provider}, generated.id, %{max_capacity: 4})
+
+      assert edited.origin == :generated
+
+      set_default_capacity(program, 15)
+      assert {:ok, _} = Participation.sync_sessions_for_program(program.id)
+
+      assert Repo.get!(ProgramSession, generated.id).max_capacity == 4
+
+      # ...while its untouched sibling still tracks the Program.
+      others = Enum.reject(sessions_for(program.id), &(&1.id == generated.id))
+      assert Enum.all?(others, &(&1.max_capacity == 15))
+    end
+
+    test "clearing the default returns generated sessions to uncapped" do
+      program = fortnightly_program(default_session_capacity: 12)
+      assert {:ok, %{generated: 2}} = Participation.sync_sessions_for_program(program.id)
+
+      set_default_capacity(program, nil)
+
+      assert {:ok, _} = Participation.sync_sessions_for_program(program.id)
+
+      assert Enum.all?(sessions_for(program.id), &is_nil(&1.max_capacity))
+    end
+
+    test "a program naming no default generates uncapped sessions" do
+      program = fortnightly_program(default_session_capacity: nil)
+
+      assert {:ok, %{generated: 2}} = Participation.sync_sessions_for_program(program.id)
+
+      assert Enum.all?(sessions_for(program.id), &is_nil(&1.max_capacity))
+    end
+
     test "generates one session per scheduled date" do
       program = fortnightly_program()
 
@@ -105,14 +185,21 @@ defmodule KlassHero.Participation.SyncSessionsForProgramTest do
     end
 
     test "never touches a manually created session" do
-      program = fortnightly_program()
+      # The program's default differs from the manual session's own capacity, so a
+      # realignment that ignored `origin` would overwrite a number the provider typed.
+      #
+      # Deliberately dated on one of the schedule's own meeting days, at a different
+      # time of day: on any other date the date filter alone would spare it, and the
+      # test would pass with the `origin` scoping deleted.
+      program = fortnightly_program(default_session_capacity: 12)
 
       {:ok, manual} =
         Participation.create_session(admin_scope(), %{
           program_id: program.id,
-          session_date: Date.add(Date.utc_today(), 3),
+          session_date: Date.utc_today(),
           start_time: ~T[09:00:00],
-          end_time: ~T[10:00:00]
+          end_time: ~T[10:00:00],
+          max_capacity: 4
         })
 
       assert {:ok, %{generated: 2, cancelled: 0}} = Participation.sync_sessions_for_program(program.id)
@@ -120,6 +207,7 @@ defmodule KlassHero.Participation.SyncSessionsForProgramTest do
       reloaded = Repo.get!(ProgramSession, manual.id)
       assert reloaded.status == :scheduled
       assert reloaded.origin == :manual
+      assert reloaded.max_capacity == 4
     end
 
     test "leaves a completed session alone even when its slot leaves the schedule" do
