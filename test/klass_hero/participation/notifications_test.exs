@@ -67,6 +67,37 @@ defmodule KlassHero.Participation.NotificationsTest do
     end
   end
 
+  describe "provider stats" do
+    # The provider overview counts completed sessions with a live query, so this
+    # message is the only thing that makes a mounted overview recount. It used to
+    # be broadcast by the `provider_session_stats` projection; nothing else emits
+    # it now, and a silent regression here looks exactly like a counter that is
+    # merely slow.
+    test "a completed session tells the provider's stats topic to recount" do
+      {provider_id, program_id} = program_of_new_provider()
+      subscribe(Notifications.stats_topic(provider_id))
+
+      assert :ok =
+               Notifications.notify(
+                 event(:session_completed, %{session_id: Ecto.UUID.generate(), program_id: program_id})
+               )
+
+      assert_receive :session_stats_updated, 1000
+    end
+
+    test "no other session event touches the stats topic" do
+      {provider_id, program_id} = program_of_new_provider()
+      subscribe(Notifications.stats_topic(provider_id))
+
+      for type <- @session_events -- [:session_completed] do
+        assert :ok =
+                 Notifications.notify(event(type, %{session_id: Ecto.UUID.generate(), program_id: program_id}))
+
+        refute_receive :session_stats_updated, 50, "#{type} does not change the completed-session count"
+      end
+    end
+  end
+
   describe "attendance" do
     test "reaches both the provider and the child topic, carrying the kind" do
       {provider_id, program_id} = program_of_new_provider()

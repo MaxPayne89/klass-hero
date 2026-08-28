@@ -132,14 +132,23 @@ defmodule KlassHero.Provider.ProgramsTest do
   end
 
   describe "get_total_session_count/1" do
-    test "returns the sum of completed-session counts across the provider's programs" do
-      provider_id = Ecto.UUID.generate()
+    # Counting rules (statuses, cross-provider isolation) are pinned in
+    # ParticipationSessionStatsACLTest; this asserts the facade reaches them.
+    test "returns the count of completed sessions across the provider's programs" do
+      provider = insert(:provider_profile_schema)
+      art = insert(:program_schema, provider_id: provider.id, title: "Art")
+      chess = insert(:program_schema, provider_id: provider.id, title: "Chess")
 
-      insert(:session_stats, provider_id: provider_id, sessions_completed_count: 3)
-      insert(:session_stats, provider_id: provider_id, sessions_completed_count: 7)
-      insert(:session_stats, sessions_completed_count: 10)
+      for {program, status, date} <- [
+            {art, "completed", ~D[2026-05-01]},
+            {art, "completed", ~D[2026-05-02]},
+            {chess, "completed", ~D[2026-05-03]},
+            {chess, "scheduled", ~D[2026-05-04]}
+          ] do
+        insert(:program_session_schema, program_id: program.id, status: status, session_date: date)
+      end
 
-      assert 10 == Provider.get_total_session_count(provider_id)
+      assert 3 == Provider.get_total_session_count(provider.id)
     end
   end
 

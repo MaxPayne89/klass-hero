@@ -606,6 +606,14 @@ defmodule KlassHero.Participation do
   defdelegate child_topic(child_id), to: Notifications
 
   @doc """
+  Returns the provider stats topic — the topic carrying `:session_stats_updated` to
+  the provider overview, whose completed-session counter is a live count. The
+  overview subscribes; `Notifications` publishes on `:session_completed`.
+  """
+  @spec stats_topic(String.t()) :: String.t()
+  defdelegate stats_topic(provider_id), to: Notifications
+
+  @doc """
   Seeds a session roster with the program's enrolled children. Best-effort: always returns `:ok`.
 
   Invoked by the `session_created` integration-event handler.

@@ -3,8 +3,8 @@ defmodule KlassHero.Provider.Programs do
   Read-side queries over a provider's programs and sessions.
 
   Backed by the `provider_programs` and `provider_session_details` projections
-  (fed by Program Catalog / Participation integration events) and the
-  `provider_session_stats` read table. Consumers reach these through
+  (fed by Program Catalog / Participation integration events), plus a live
+  cross-context count for completed sessions. Consumers reach these through
   `KlassHero.Provider`'s public API — this module is internal to the Provider
   context.
 
@@ -14,18 +14,15 @@ defmodule KlassHero.Provider.Programs do
 
   import Ecto.Query
 
+  alias KlassHero.Provider.ParticipationSessionStatsACL
   alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Provider.SessionDetail
-  alias KlassHero.Provider.SessionStats
   alias KlassHero.Repo
 
   @doc "Returns the total session count across all of a provider's programs."
   @spec get_total_session_count(String.t()) :: non_neg_integer()
   def get_total_session_count(provider_id) when is_binary(provider_id) do
-    SessionStats
-    |> where([s], s.provider_id == ^provider_id)
-    |> select([s], coalesce(sum(s.sessions_completed_count), 0))
-    |> Repo.one()
+    ParticipationSessionStatsACL.total_completed_sessions(provider_id)
   end
 
   @doc """

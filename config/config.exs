@@ -32,7 +32,6 @@ alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
 alias KlassHero.Provider.Projections.ProviderPrograms
 alias KlassHero.Provider.Projections.ProviderSessionDetails
-alias KlassHero.Provider.Projections.ProviderSessionStats
 alias KlassHero.Provider.ProviderEventHandler
 alias KlassHero.Provider.StaffInvitationStatusHandler
 alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
@@ -337,8 +336,7 @@ config :klass_hero, :event_consumers, %{
     {ProviderSessionDetails, :project}
   ],
   "integration:participation:session_completed" => [
-    {ProviderSessionDetails, :project},
-    {ProviderSessionStats, :project}
+    {ProviderSessionDetails, :project}
   ],
   "integration:participation:session_cancelled" => [
     {ProviderSessionDetails, :project}

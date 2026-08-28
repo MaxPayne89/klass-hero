@@ -13,6 +13,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
   import KlassHeroWeb.ProviderComponents
 
   alias KlassHero.Enrollment
+  alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider
@@ -43,7 +44,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
     top_programs = build_top_programs(program_listings, enrollment_counts)
 
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "provider:#{provider.id}:stats_updated")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.stats_topic(provider.id))
 
       Phoenix.PubSub.subscribe(
         KlassHero.PubSub,

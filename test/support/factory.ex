@@ -45,7 +45,6 @@ defmodule KlassHero.Factory do
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.SessionStaffAssignment
-  alias KlassHero.Provider.SessionStats
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
 
@@ -543,30 +542,6 @@ defmodule KlassHero.Factory do
       session_id: session.id,
       staff_member_id: staff.id,
       assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
-    }
-  end
-
-  # =============================================================================
-  # Provider Context - Session Stats Factories
-  # =============================================================================
-
-  @doc """
-  Factory for `KlassHero.Provider.SessionStats` rows (read model, no FK constraints).
-
-  Backs tests over the denormalized provider_session_stats table.
-
-  ## Examples
-
-      schema = insert(:session_stats)
-      schema = insert(:session_stats, sessions_completed_count: 5)
-  """
-  def session_stats_factory do
-    %SessionStats{
-      id: Ecto.UUID.generate(),
-      provider_id: Ecto.UUID.generate(),
-      program_id: Ecto.UUID.generate(),
-      program_title: sequence(:session_stats_title, &"Program #{&1}"),
-      sessions_completed_count: 0
     }
   end
 
