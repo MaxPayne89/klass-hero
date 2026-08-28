@@ -3,7 +3,8 @@ name: build-elixir
 description: >-
   Deliberate TDD-first, design-heavy workflow for building an Elixir/Phoenix
   change end-to-end — surface rival designs, pick one, drive red→green, keep the
-  test suite lean. Invoke with: /build-elixir <what you're building>
+  test suite lean, leave the code better than you found it. Invoke with:
+  /build-elixir <what you're building>
 disable-model-invocation: true
 ---
 
@@ -16,7 +17,8 @@ completion criterion; do not advance until it is met.
 The spine is the red→green **loop**, entered only *after* a design **gate** the
 human owns. Leading words used throughout: **seam** (the interface under change),
 **gate** (the human design decision), **red** (the failing test that drives a
-cycle), **fold** (collapsing many tests into one).
+cycle), **fold** (collapsing many tests into one), **campsite** (leave the code
+you touched cleaner than you found it).
 
 ## Phase 1 — Orient the seam
 
@@ -26,13 +28,32 @@ your vocabulary matches the project's domain language. Then name, in writing, th
 what is its *interface* (every fact a caller must know), where does the *seam*
 sit, is there a real *adapter* or a hypothetical one.
 
-**Done when:** the seam and its interface are written down and confirmed with the
-user.
+Then map the **blast radius** — every caller and dependent of that seam. It is
+also the **campsite** boundary: touched files plus what they directly reach.
+
+- CodeGraph first (`codegraph_explore`), per CLAUDE.md.
+- `/phx:trace` for a call tree from entry points before a signature change.
+- `phx:xref-analyzer` for module coupling and compile-connected edges.
+
+**Done when:** the seam, its interface, and its blast radius are written down and
+confirmed with the user.
 
 ## Phase 2 — Design gate (mandatory, human-owned)
 
-Run `/design-an-interface` to generate **≥2–3 radically different** designs for the
-seam from Phase 1. This gate is never skipped for a non-trivial change, and the
+First spawn, in parallel, whichever phx specialist matches the surface, and feed
+its findings **into** the design generation as input:
+
+| Surface | Agent |
+|---|---|
+| schema, migration, query shape | `phx:ecto-schema-designer` |
+| process, state, concurrency | `phx:otp-advisor` |
+| interactive surface | `phx:liveview-architect` |
+| background job | `phx:oban-specialist` |
+
+They **advise**. They never author the comparison table and never make the pick.
+
+Then run `/design-an-interface` to generate **≥2–3 radically different** designs for
+the seam from Phase 1. This gate is never skipped for a non-trivial change, and the
 **user makes the final call** — no implementation code is written before the pick.
 
 Surface the designs like this:
@@ -70,7 +91,9 @@ skip and said so.
 `/tdd` drives. First agree the **seams under test** with the user (no test at an
 unconfirmed seam). Then cycle in vertical slices: one failing test (**red**) →
 the minimal code to pass it → repeat, each test a tracer bullet shaped by what the
-last cycle taught. Refactoring is **not** part of the loop — it belongs to Phase 6.
+last cycle taught. Refactoring is **not** part of the loop — it belongs to Phase 7.
+
+Note **campsite** candidates as you meet them — write them down, edit nothing.
 
 **Done when:** the chosen design is implemented and every slice's test is green.
 
@@ -96,34 +119,59 @@ Obey `.claude/rules/liveview.md` (streams for collections, `<.link navigate/patc
 `to_form/2` + `<.input>`, no LiveComponents without cause) and
 `.claude/rules/frontend.md` (mobile-first, `Theme.typography(:variant)`). Test with
 `exunit-testing`'s `liveview-testing.md` conventions (assert on element IDs, never
-raw text).
+raw text). Run `/phx:assigns-audit` when the LiveView carries collections — it
+catches assign bloat and missing `temporary_assigns`.
 
 **Done when:** UI tests are green and the LiveView rules are satisfied.
 
-## Phase 7 — Idioms & Iron Laws (adhere, don't restate)
+## Phase 7 — Campsite pass
 
-These load automatically — do not copy them into your reasoning, just comply:
+Apply every **campsite** candidate noted in Phases 1–6, bounded to the blast radius
+from Phase 1. Each one is behaviour-preserving and covered by a green test — if it
+isn't covered, write the test first.
 
-- The `inject-iron-laws.sh` hook feeds the Elixir/Phoenix Iron Laws into every
-  subagent.
-- The plugin's `elixir-idioms`, `ecto-patterns`, `security`, `oban`,
-  `phoenix-contexts` auto-attach by context.
-- `.claude/rules/elixir-style.md` and `domain-architecture.md` are always loaded
-  (generic idioms + the project's DDD modeling idioms live there).
+- **`/simplify`** whenever the change touched more than one module — reuse,
+  simplification, efficiency, altitude.
+- **Performance:** `/phx:n1-check` when the change added queries; `/phx:perf` on a
+  hot path.
+- **File an issue instead of fixing** only when the refactor would need its own
+  design **gate** — a call the user owns. Everything else gets fixed here.
+- A **second occurrence** of a class is fixed here *and* earns a rule or `lint_*`
+  task — see CLAUDE.md's "Second Occurrence Escalates".
+- Ship campsite work as its own `refactor:` commits, so review reads the cleanup
+  apart from the feature.
+
+**Done when:** every noted candidate is applied or filed with its reason, and
+`/simplify` has run (or the change touched exactly one module).
 
 ## Phase 8 — Verify
 
 Run `mix precommit` (or `/phx:verify` for a tool-discovering loop). Then a review
 pass: `/phx:review` (spawns `iron-law-judge`) for general changes, or
-`/review-architecture` for bounded-context / structural changes.
+`/review-architecture` for bounded-context / structural changes. When the work came
+from a GitHub issue or a `/phx:plan` file, add `phx:requirements-verifier` to
+cross-check the implementation against what was actually asked for.
 
 **Done when:** precommit is green and the review pass reports no blockers.
+
+## Standing context (adhere, don't restate)
+
+These load automatically — do not copy them into your reasoning, just comply: the
+`inject-iron-laws.sh` hook feeds the Iron Laws into every subagent, and the plugin's
+`elixir-idioms`, `ecto-patterns`, `security`, `oban`, `phoenix-contexts` auto-attach
+by context.
+
+`.claude/rules/elixir-style.md` and `domain-architecture.md` are always loaded —
+generic idioms and the project's domain modeling idioms live there.
 
 ## Rules
 
 - The **gate** (Phase 2) is never skipped for a non-trivial change, and the **user
   picks** the design — never auto-select.
 - Never restate the Iron Laws or idioms; name their source and comply.
-- Never refactor inside the red→green loop; that is Phase 6/8 work.
+- Never refactor inside the red→green loop; that is Phase 7 work, and campsite
+  fixes ship as their own commits.
+- The phx specialists advise; `/design-an-interface`, `/tdd` and `exunit-testing`
+  decide.
 - Route to the named skills; do not improvise a manual substitute for `/tdd`,
   `/design-an-interface`, or `exunit-testing` — composing them is the whole point.
