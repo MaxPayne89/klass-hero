@@ -11,10 +11,15 @@ defmodule KlassHeroWeb.ProviderProfileLive do
 
   import KlassHeroWeb.CompositeComponents
   import KlassHeroWeb.MarketingComponents
+  # Only the card. The section chrome around it differs from the program page's
+  # by design — there a bordered panel inside a column, here a full-width band.
+  import KlassHeroWeb.ProgramComponents, only: [hero_card: 1]
 
   alias KlassHero.ProgramCatalog
+  alias KlassHero.Provider
   alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Presenters.ProgramPresenter
+  alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Theme
 
   @impl true
@@ -42,10 +47,20 @@ defmodule KlassHeroWeb.ProviderProfileLive do
       # page it is on, once per card.
       |> Enum.map(&ProgramPresenter.to_card_view/1)
 
+    # No lead instructor at this scope: the flag lives on a program assignment,
+    # so a person can lead one programme and not another (ADR-0016). There is no
+    # provider-wide lead to badge, which is why this skips HeroCardsPresenter and
+    # goes straight to the card shape.
+    hero_cards =
+      provider_id
+      |> Provider.list_public_staff()
+      |> StaffMemberPresenter.to_hero_card_list()
+
     socket
     |> assign(:page_title, provider.business_name)
     |> assign(:provider, provider)
     |> assign(:programs_empty?, programs == [])
+    |> assign(:hero_cards, hero_cards)
     |> stream(:programs, programs)
   end
 
@@ -147,6 +162,24 @@ defmodule KlassHeroWeb.ProviderProfileLive do
           id={dom_id}
           program={program}
         />
+      </div>
+    </.profile_section>
+
+    <%!-- Hidden rather than empty-stated: this is a footnote to the programs
+          above, and a second "nothing here" block would read as a second
+          failure. Cream also keeps the bands alternating — Programs is white
+          and the CTA below is the base fade. --%>
+    <.profile_section
+      :if={@hero_cards != []}
+      id="provider-heroes"
+      background="bg-hero-cream-100"
+    >
+      <h2 class={[Theme.typography(:section_title), Theme.text_color(:heading), "mb-6"]}>
+        {ngettext("Meet the Hero", "Meet the Heroes", length(@hero_cards))}
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+        <.hero_card :for={card <- @hero_cards} {card} />
       </div>
     </.profile_section>
 

@@ -108,7 +108,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   end
 
   defp load_team_members(program_id) when is_binary(program_id) do
-    staff = Provider.list_active_staff_for_program(program_id)
+    staff = Provider.list_public_staff_for_program(program_id)
 
     lead_id =
       case Provider.get_lead_instructor(program_id) do

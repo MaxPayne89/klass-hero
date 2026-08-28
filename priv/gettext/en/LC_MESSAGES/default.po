@@ -94,7 +94,7 @@ msgstr ""
 #: lib/klass_hero_web/components/layouts/app.html.heex:36
 #: lib/klass_hero_web/components/layouts/app.html.heex:198
 #: lib/klass_hero_web/components/marketing_components.ex:202
-#: lib/klass_hero_web/live/provider_profile_live.ex:129
+#: lib/klass_hero_web/live/provider_profile_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Programs"
 msgstr ""
@@ -284,6 +284,7 @@ msgid "Loading..."
 msgstr ""
 
 #: lib/klass_hero_web/live/program_detail_live.ex:408
+#: lib/klass_hero_web/live/provider_profile_live.ex:178
 #, elixir-autogen, elixir-format
 msgid "Meet the Hero"
 msgid_plural "Meet the Heroes"
@@ -416,7 +417,7 @@ msgstr ""
 
 #: lib/klass_hero_web/live/contact_live.ex:85
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:326
-#: lib/klass_hero_web/live/provider_profile_live.ex:107
+#: lib/klass_hero_web/live/provider_profile_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "Address"
 msgstr ""
@@ -815,7 +816,7 @@ msgstr ""
 
 #: lib/klass_hero_web/live/contact_live.ex:78
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:311
-#: lib/klass_hero_web/live/provider_profile_live.ex:113
+#: lib/klass_hero_web/live/provider_profile_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "Phone"
 msgstr ""
@@ -4394,7 +4395,7 @@ msgid "+1234567890"
 msgstr ""
 
 #: lib/klass_hero_web/components/composite_components.ex:516
-#: lib/klass_hero_web/live/provider_profile_live.ex:93
+#: lib/klass_hero_web/live/provider_profile_live.ex:108
 #, elixir-autogen, elixir-format
 msgid "About the Provider"
 msgstr ""
@@ -4537,7 +4538,7 @@ msgid "View your assignments"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:318
-#: lib/klass_hero_web/live/provider_profile_live.ex:120
+#: lib/klass_hero_web/live/provider_profile_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "Website"
 msgstr ""
@@ -5430,7 +5431,7 @@ msgstr ""
 msgid "Hand-picked, vetted programs across Berlin — filter by category, age, or schedule."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider_profile_live.ex:155
+#: lib/klass_hero_web/live/provider_profile_live.ex:188
 #: lib/klass_hero_web/live/trust_safety_live.ex:103
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Have questions?"
@@ -8014,27 +8015,27 @@ msgstr ""
 msgid "Upload failed."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider_profile_live.ex:157
+#: lib/klass_hero_web/live/provider_profile_live.ex:190
 #, elixir-autogen, elixir-format
 msgid "Message %{provider} directly about their programs."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider_profile_live.ex:169
+#: lib/klass_hero_web/live/provider_profile_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "Message this provider"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider_profile_live.ex:135
+#: lib/klass_hero_web/live/provider_profile_live.ex:150
 #, elixir-autogen, elixir-format
 msgid "No programs running right now"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider_profile_live.ex:28
+#: lib/klass_hero_web/live/provider_profile_live.ex:33
 #, elixir-autogen, elixir-format
 msgid "Provider not found. They may have been removed or are no longer listed."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider_profile_live.ex:136
+#: lib/klass_hero_web/live/provider_profile_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "This provider has no open programs at the moment. Check back soon."
 msgstr ""

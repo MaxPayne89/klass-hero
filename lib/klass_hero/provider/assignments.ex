@@ -478,6 +478,28 @@ defmodule KlassHero.Provider.Assignments do
   end
 
   @doc """
+  As `list_active_staff_for_program/1`, for the public `/programs/:id` page:
+  additionally drops staff who have not claimed their seat.
+
+  A sibling rather than a narrowing of the original, and not a narrowing of
+  `active_staffing_query/0` either. Both feed provider-facing surfaces — the
+  staffing modal and the programs table — which must keep showing people whose
+  invitations are still outstanding. Narrowing the shared base is precisely the
+  shape of #1310, where an over-filtered read made staffed programs read as
+  "Unassigned" and their staff unfindable.
+
+  Skips `StaffMember.load_pay_rate/1`: no public surface reads a pay rate.
+  """
+  @spec list_public_staff_for_program(String.t()) :: [StaffMember.t()]
+  def list_public_staff_for_program(program_id) when is_binary(program_id) do
+    active_staffing_query()
+    |> StaffMember.claimed()
+    |> where([assignment: a], a.program_id == ^program_id)
+    |> select([staff: s], s)
+    |> Repo.all()
+  end
+
+  @doc """
   Lists the *user* IDs of staff currently active on a program.
 
   The membership set Messaging needs to answer "does this user act for the
