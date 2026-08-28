@@ -26,8 +26,6 @@ defmodule KlassHero.Provider.ProviderProfile do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.User
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @timestamps_opts [type: :utc_datetime]
 
@@ -116,7 +114,8 @@ defmodule KlassHero.Provider.ProviderProfile do
     field :youtube_url, :string
     field :linkedin_url, :string
 
-    belongs_to :verified_by, User, type: :binary_id
+    # Accounts owns the verifier; correlation id only, no association (#1434).
+    field :verified_by_id, :binary_id
 
     timestamps()
   end

@@ -18,8 +18,6 @@ defmodule KlassHero.Enrollment.Enrollment do
 
   import Ecto.Changeset
 
-  alias KlassHero.ProgramCatalog.Program
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   @timestamps_opts [type: :utc_datetime]
@@ -28,7 +26,8 @@ defmodule KlassHero.Enrollment.Enrollment do
   @valid_payment_methods ~w(card transfer)
 
   schema "enrollments" do
-    belongs_to :program, Program
+    # ProgramCatalog owns the program; correlation id only, no association (#1434).
+    field :program_id, :binary_id
     field :child_id, :binary_id
     field :parent_id, :binary_id
 
