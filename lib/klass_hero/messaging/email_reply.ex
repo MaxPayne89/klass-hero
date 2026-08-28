@@ -12,7 +12,6 @@ defmodule KlassHero.Messaging.EmailReply do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.User
   alias KlassHero.Messaging.InboundEmail
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -28,7 +27,6 @@ defmodule KlassHero.Messaging.EmailReply do
     field :sent_by_id, :binary_id
 
     belongs_to :inbound_email, InboundEmail, foreign_key: :inbound_email_id, define_field: false
-    belongs_to :sent_by, User, foreign_key: :sent_by_id, define_field: false
 
     timestamps()
   end

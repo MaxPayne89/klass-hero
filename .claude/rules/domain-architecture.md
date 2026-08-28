@@ -101,6 +101,37 @@ not copy this into one.
 - For cross-context **reads**: **call the owning context's root facade directly** (ADR 0015). This is the default at every layer — a projection, event handler, worker or web helper calls the facade with no adapter in between. Reach for something heavier only when it earns its place:
   - an **ACL adapter** (`acl/`) when there is genuine translation to do — remapping the other context's errors into your vocabulary, masking fields behind a business rule, cycle-breaking direct table access, or a query no facade expresses. An ACL that only forwards a call is indirection without a payer; fold it into the caller.
   - a **projection** when a per-render facade call cannot serve the read path.
+- **A facade owns its return types, so naming what it returns is not a violation.**
+  `Provider.get_staff_member/2` yields `{:ok, %StaffMember{}}`, so any caller must name that
+  struct to spec it, match on it, or read a field off it — and may re-export it through its
+  own `@spec`. Alias, typespec, pattern match, field read and re-export are all fine. The
+  coupling is created by the shape of the facade's public API, not by the caller's alias;
+  chasing the alias without changing the return type would only replace a named struct with
+  an unnamed one, and under schema-as-struct the entity **is** the DTO, so a struct twin to
+  hide it is the wrong trade. The violation line is `Repo`/query access to the other
+  context's tables — that, not the alias, is what to look for. Reference: `accounts.ex`
+  names `Provider.StaffMember` in four `@spec`s and three pattern matches and issues no
+  query against Provider's tables (#1434).
+- **Never declare a `belongs_to`/`has_one` onto another context's schema.** Store the
+  correlation id as a plain `field` and read across via the facade. ADR 0001 already forbids
+  the SQL join; the association is the thing that makes one reachable, from any call site,
+  with a single `Repo.preload/2`. #1434 removed the ten that existed — eight had never been
+  preloaded at all. Two traps when removing one: without `define_field: false` the
+  `belongs_to` is the **sole** declaration of the id field, so it must be *replaced* with
+  `field :x_id, :binary_id`, not deleted — deleting it silently drops a column the changeset
+  still casts; and `foreign_key_constraint/2` and `unique_constraint/2` keep working either
+  way, since both key off the field name rather than the association.
+  **One survives, on the cycle-breaking ground ADR 0015 already grants:**
+  `Enrollment.program` → `ProgramCatalog.Program`. ProgramCatalog depends on Enrollment for
+  capacity, so Enrollment cannot call its facade, and direct `programs` access is sanctioned
+  for that pair (`enrollment/…/acl/program_catalog_acl.ex`). `Admin.BookingLive` needs a real
+  association for its Backpex `Fields.BelongsTo` to search and sort by title. The test is the
+  ADR-0015 justification, not the module name — no other pair currently has one, and a new
+  association still has to earn it.
+  **A Backpex `Fields.BelongsTo` is a consumer no grep will find.** It names the association
+  declaratively — no `preload`, no `Repo.preload`, no `assoc/2` — and joins the other table to
+  search and sort. Check `lib/klass_hero_web/live/admin/` before concluding an association is
+  unused.
 - **One-shot migration backfills are exempt**, and only they. A module under
   `lib/klass_hero/release/` called from a migration's `up/0` may read another
   context's tables directly in raw SQL, with no facade and no `acl_span`. A facade

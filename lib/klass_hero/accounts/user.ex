@@ -13,10 +13,6 @@ defmodule KlassHero.Accounts.User do
 
   alias KlassHero.Accounts.User
   alias KlassHero.Accounts.{UserRole, UserRoles}
-  # Cross-context references for admin dashboard preloading (read-only).
-  # Pragmatic DDD boundary crossing — see AccountLive moduledoc.
-  alias KlassHero.Family.ParentProfile
-  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Locales
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -35,9 +31,6 @@ defmodule KlassHero.Accounts.User do
     field :active_persona, Ecto.Enum, values: UserRole.valid_roles()
     field :is_admin, :boolean, default: false
     field :disabled_email_notifications, {:array, Ecto.Enum}, values: [:new_message_email], default: []
-
-    has_one :parent_profile, ParentProfile, foreign_key: :identity_id
-    has_one :provider_profile, ProviderProfile, foreign_key: :identity_id
 
     timestamps(type: :utc_datetime)
   end

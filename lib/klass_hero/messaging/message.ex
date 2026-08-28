@@ -13,7 +13,6 @@ defmodule KlassHero.Messaging.Message do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.User
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
 
@@ -32,7 +31,6 @@ defmodule KlassHero.Messaging.Message do
     field :deleted_at, :utc_datetime
 
     belongs_to :conversation, Conversation, define_field: false
-    belongs_to :sender, User, foreign_key: :sender_id, define_field: false
     has_many :attachments, Attachment, foreign_key: :message_id
 
     timestamps()

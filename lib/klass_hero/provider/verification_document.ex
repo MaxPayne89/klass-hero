@@ -22,7 +22,6 @@ defmodule KlassHero.Provider.VerificationDocument do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.User
   # Parked alias to the still-DDD ProviderProfile schema — repointed to the
   # flattened KlassHero.Provider.ProviderProfile in Slice 5.
   alias KlassHero.Provider.DocumentType
@@ -55,7 +54,8 @@ defmodule KlassHero.Provider.VerificationDocument do
       source: :provider_id,
       references: :id
 
-    belongs_to :reviewed_by, User
+    # Accounts owns the reviewer; correlation id only, no association (#1434).
+    field :reviewed_by_id, :binary_id
 
     timestamps()
   end

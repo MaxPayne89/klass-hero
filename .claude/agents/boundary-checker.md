@@ -99,9 +99,15 @@ schemas, or `adapters/` modules.
      `config/config.exs`. That registry names every context's handlers by design; it is
      the wiring, not a boundary crossing. Test code invoking such a handler directly to
      exercise the wiring is integration-test infrastructure, not production reach-in.
+   - **An entity B's facade RETURNS.** `Provider.get_staff_member/2` yields
+     `{:ok, %StaffMember{}}`, so a caller must name the struct to spec it, match on it, or
+     read a field off it. The facade owns its return types, and the coupling is the shape of
+     B's public API rather than A's alias — see `.claude/rules/domain-architecture.md`
+     § Cross-Context Access. Flag the **query**, never the name (#1434).
 
    Note the asymmetry these exceptions preserve: **production** code in A must still never
-   name B's handler or entity modules. Only config wiring and test construction may.
+   name B's handler modules, nor an entity B's facade does not hand out. Only config wiring
+   and test construction may.
 
 **Example violation:**
 ```elixir
@@ -123,7 +129,12 @@ context's Ecto schemas / tables via `Repo` — even indirectly via
 is fine (schema-as-struct: the context module is the data-access API).
 
 **Exceptions:**
-- `KlassHero.Accounts.User` — commonly used for `belongs_to` associations (known exception)
+- **A struct another context's facade returned.** Naming it — alias, typespec, pattern
+  match, field read, or re-export through your own `@spec` — is not a violation; the facade
+  owns its return types. See `.claude/rules/domain-architecture.md` § Cross-Context Access
+  for the rule and its reasoning. There is no per-module list to consult: the test is
+  whether the module issues a query against the other context's tables, not whether it
+  names the struct.
 - **A raw-string table read (`from(p in "programs", ...)`) that carries an `acl_span`.**
   ADR 0015 lists cycle-breaking direct table access as legitimate — ProgramCatalog
   depends on Enrollment, so Enrollment cannot call its facade — and requires only that
@@ -243,11 +254,13 @@ are deliberate instances of it.
 - Both the flattened and old-DDD-derived shapes are legal simultaneously during the
   migration (see the note above `## Scope`) — a context using the old tree is not itself
   a finding, and neither is a context missing `adapters/`/`domain/` because it's flat
-- The `Accounts.User` reference is a KNOWN exception — do not flag it
+- Naming a struct another context's facade RETURNS is not a violation — do not flag it.
+  See `.claude/rules/domain-architecture.md` § Cross-Context Access; the test is whether a
+  query is issued against the other context's tables, not whether the struct is named
 - Shared (`KlassHero.Shared.*`) is universal infrastructure — accessible to all
 - A context using `Repo` on its OWN schemas is correct (schema-as-struct) — never flag it
 - A direct facade call is the DEFAULT for a cross-context read (ADR 0015) — never flag one
   for lacking an ACL. Reserve a projection for a genuinely hot read path
 - Critical severity: cross-context Repo/schema access, reaching into another context's internals
-- Warning severity: cross-context `belongs_to` beyond the User exception, an unnecessary ACL
+- Warning severity: any cross-context `belongs_to`/`has_one` (no exceptions — #1434), an unnecessary ACL
   (pure delegation — no error remapping, no business-rule masking, no cycle to break)
