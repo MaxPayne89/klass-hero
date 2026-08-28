@@ -186,6 +186,15 @@ defmodule KlassHero.Participation.ParticipationRecord do
   def valid_statuses, do: @valid_statuses
 
   @doc """
+  The statuses that count a child as having attended.
+
+  Strings, because both callers compare against the `text` status column from
+  inside a SQL fragment rather than against a loaded struct.
+  """
+  @spec checked_in_statuses() :: [String.t()]
+  def checked_in_statuses, do: ~w(checked_in checked_out)
+
+  @doc """
   Admin correction — allows any status transition and time edits, bypassing the
   forward-only state machine.
 
