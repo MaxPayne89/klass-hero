@@ -30,7 +30,6 @@ alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionR
 alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
-alias KlassHero.Provider.Projections.ProviderPrograms
 alias KlassHero.Provider.Projections.ProviderSessionDetails
 alias KlassHero.Provider.ProviderEventHandler
 alias KlassHero.Provider.StaffInvitationStatusHandler
@@ -255,13 +254,11 @@ config :klass_hero, :event_consumers, %{
   # Program Catalog
   "integration:program_catalog:program_created" => [
     {ParticipationEventHandler, :handle_event},
-    {ProgramListings, :project},
-    {ProviderPrograms, :project}
+    {ProgramListings, :project}
   ],
   "integration:program_catalog:program_updated" => [
     {ParticipationEventHandler, :handle_event},
-    {ProgramListings, :project},
-    {ProviderPrograms, :project}
+    {ProgramListings, :project}
   ],
 
   # Enrollment

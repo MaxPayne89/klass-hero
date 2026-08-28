@@ -2,15 +2,16 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
   @moduledoc """
   Orchestrates a provider submitting an incident report.
 
-  Validates ownership via Provider-local projections (no cross-context
-  synchronous reads), optionally uploads a photo to private storage, and
-  **atomically** persists the report row plus the notification-email Oban job.
+  Validates ownership against the owning context's write model, optionally uploads
+  a photo to private storage, and **atomically** persists the report row plus the
+  notification-email Oban job.
 
   Persistence and enqueue commit together — if either fails, the report row is
   rolled back, no email is scheduled, and any uploaded photo is deleted on a
   best-effort basis. Postgres ACID covers the durability guarantee.
   """
 
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.NotifyIncidentReportedWorker
@@ -55,10 +56,14 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
     end
   end
 
-  # Ownership enforced via Provider-local projections — no cross-context sync read.
+  # Ownership is read from the write model, not a projection. This is a write-path
+  # guard, and the `provider_programs` projection it used to read was eventually
+  # consistent — so a report filed against a program created moments earlier was
+  # refused as foreign. `Assignments.ensure_program_owned/2` already read the
+  # catalog directly for the same reason (#1134).
   defp validate_ownership(%{program_id: pid, provider_profile_id: prov_id})
        when is_binary(pid) and is_binary(prov_id) do
-    case Programs.get_provider_program(pid, prov_id) do
+    case ProgramCatalog.get_program_for_provider(prov_id, pid) do
       {:ok, _owned} -> :ok
       {:error, :not_found} -> {:error, [program_id: "does not belong to this provider"]}
     end

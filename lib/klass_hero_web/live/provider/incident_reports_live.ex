@@ -10,6 +10,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
 
   use KlassHeroWeb, :live_view
 
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile
   alias KlassHeroWeb.Presenters.IncidentReportPresenter
@@ -29,10 +30,10 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
     end
   end
 
-  # A single scoped projection read verifies ownership and fetches the record,
-  # avoiding a race between two queries.
+  # A single scoped read verifies ownership and fetches the record, avoiding a
+  # race between two queries.
   defp mount_for_provider(socket, provider, program_id) do
-    case Provider.get_provider_program(program_id, provider.id) do
+    case ProgramCatalog.get_program_for_provider(provider.id, program_id) do
       {:ok, program} ->
         summaries = Provider.list_incident_reports_for_program(provider.id, program_id)
         rows = Enum.map(summaries, &IncidentReportPresenter.to_list_view/1)
@@ -70,7 +71,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
 
       <.page_header>
         <:title>{gettext("Incident Reports")}</:title>
-        <:subtitle :if={@program}>{@program.name}</:subtitle>
+        <:subtitle :if={@program}>{@program.title}</:subtitle>
       </.page_header>
 
       <div id="incident-reports" phx-update="stream" class="mt-6 space-y-4">

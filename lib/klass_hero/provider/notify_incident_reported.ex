@@ -9,10 +9,10 @@ defmodule KlassHero.Provider.NotifyIncidentReported do
   fields through the enqueue.
   """
 
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.IncidentReportedEmailNotifier
-  alias KlassHero.Provider.Programs
   alias KlassHero.Shared.Storage
 
   require Logger
@@ -60,9 +60,9 @@ defmodule KlassHero.Provider.NotifyIncidentReported do
   end
 
   defp resolve_program_label(%IncidentReport{program_id: pid}) when is_binary(pid) do
-    case Programs.get_provider_program(pid) do
-      {:ok, %{name: name}} when is_binary(name) and byte_size(name) > 0 ->
-        name
+    case ProgramCatalog.get_program_by_id(pid) do
+      {:ok, %{title: title}} when is_binary(title) and byte_size(title) > 0 ->
+        title
 
       {:error, :not_found} ->
         Logger.warning("[NotifyIncidentReported] Program not found, using fallback label",

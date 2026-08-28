@@ -68,7 +68,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
             {"Piano for Beginners", ~T[15:00:00], ~T[16:00:00]}
           ] do
         program = insert(:program_schema, provider_id: provider.id, title: title)
-        # Titles reach the page through the ProviderPrograms read model, not `programs`.
+        # Titles reach the page through the `program_listings` projection, not `programs`.
         insert(:program_listing_schema, id: program.id, provider_id: provider.id, title: title)
 
         insert(:program_session_schema,

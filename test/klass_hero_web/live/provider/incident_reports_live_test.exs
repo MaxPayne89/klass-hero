@@ -5,26 +5,11 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLiveTest do
   import KlassHero.ProviderFixtures
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
   defp insert_owned_program!(provider_id, name) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    program_id = Ecto.UUID.generate()
-
-    Repo.insert!(%ProviderProgram{
-      program_id: program_id,
-      provider_id: provider_id,
-      name: name,
-      inserted_at: now,
-      updated_at: now
-    })
-
-    insert(:program_schema, id: program_id, provider_id: provider_id)
-
-    program_id
+    insert(:program_schema, provider_id: provider_id, title: name).id
   end
 
   defp put_provider_session_detail!(session_id, program_id, provider_id) do

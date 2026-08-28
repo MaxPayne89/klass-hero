@@ -414,18 +414,4 @@ defmodule KlassHero.Provider do
 
   @doc "Lists per-session detail rows for a provider's program from the projection."
   defdelegate list_program_sessions(provider_id, program_id), to: Programs
-
-  @doc """
-  Returns a projected program owned by `provider_id`; foreign ≡ missing (IDOR guard).
-
-  The default getter for provider-initiated paths — prefer it over the unscoped
-  `get_provider_program/1`.
-  """
-  defdelegate get_provider_program(program_id, provider_id), to: Programs
-
-  @doc "Returns a program by ID from the `provider_programs` projection, unscoped."
-  defdelegate get_provider_program(program_id), to: Programs
-
-  @doc "Lists all programs owned by the given provider, ordered by name asc."
-  defdelegate list_provider_programs(provider_id), to: Programs
 end

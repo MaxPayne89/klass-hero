@@ -36,13 +36,7 @@ defmodule KlassHero.Provider.Incidents.NotifyIncidentReportedTest do
         business_owner_email: "owner@example.com"
       )
 
-    program = insert(:program_schema, provider_id: provider.id)
-
-    provider_program_projection_fixture(
-      provider_id: provider.id,
-      program_id: program.id,
-      name: "Climbing Club"
-    )
+    program = insert(:program_schema, provider_id: provider.id, title: "Climbing Club")
 
     %{owner: owner, reporter: reporter, provider: provider, program: program}
   end
@@ -86,33 +80,6 @@ defmodule KlassHero.Provider.Incidents.NotifyIncidentReportedTest do
                })
 
       assert_no_email_sent()
-    end
-  end
-
-  describe "execute/1 — program lookup fallback" do
-    test "still sends email with fallback label when the program projection is missing", %{
-      provider: provider,
-      reporter: reporter
-    } do
-      # Trigger: program exists in :programs table (FK satisfied) but the
-      #         provider-local projection row was never inserted
-      # Why: Programs.get_provider_program/1 returns {:error, :not_found}
-      #      whenever the provider_programs projection row is missing
-      # Outcome: use case must not fail — falls back to "a program" label
-      unprojected_program = insert(:program_schema, provider_id: provider.id)
-
-      report =
-        incident_report_fixture(%{
-          provider_profile_id: provider.id,
-          reporter_user_id: reporter.id,
-          program_id: unprojected_program.id
-        })
-
-      assert :ok = NotifyIncidentReported.execute(notify_args(report, provider))
-
-      assert_email_sent(fn email ->
-        email.subject =~ "a program" and email.text_body =~ "a program"
-      end)
     end
   end
 

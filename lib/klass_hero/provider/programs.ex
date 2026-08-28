@@ -15,7 +15,6 @@ defmodule KlassHero.Provider.Programs do
   import Ecto.Query
 
   alias KlassHero.Provider.ParticipationSessionStatsACL
-  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
@@ -47,39 +46,6 @@ defmodule KlassHero.Provider.Programs do
   @spec get_session_detail(String.t()) :: {:ok, SessionDetail.t()} | {:error, :not_found}
   def get_session_detail(session_id) when is_binary(session_id) do
     fetch(SessionDetail, session_id)
-  end
-
-  @doc """
-  Returns a projected program owned by `provider_id` — the tenancy-safe getter.
-
-  Foreign and missing are indistinguishable: the `provider_id` predicate is part
-  of the query, so a foreign row is never reached.
-  """
-  @spec get_provider_program(String.t(), String.t()) :: {:ok, ProviderProgram.t()} | {:error, :not_found}
-  def get_provider_program(program_id, provider_id) when is_binary(program_id) and is_binary(provider_id) do
-    ProviderProgram
-    |> where([p], p.provider_id == ^provider_id)
-    |> fetch(program_id)
-  end
-
-  @doc """
-  Returns a program by ID from the `provider_programs` projection, **unscoped**.
-
-  Only for paths with no provider in scope. Any path that has a `provider_id`
-  must use `get_provider_program/2`.
-  """
-  @spec get_provider_program(String.t()) :: {:ok, ProviderProgram.t()} | {:error, :not_found}
-  def get_provider_program(program_id) when is_binary(program_id) do
-    fetch(ProviderProgram, program_id)
-  end
-
-  @doc "Lists all programs owned by the given provider, ordered by name asc."
-  @spec list_provider_programs(String.t()) :: [ProviderProgram.t()]
-  def list_provider_programs(provider_id) when is_binary(provider_id) do
-    ProviderProgram
-    |> where([p], p.provider_id == ^provider_id)
-    |> order_by([p], asc: p.name)
-    |> Repo.all()
   end
 
   defp fetch(queryable, id) do
