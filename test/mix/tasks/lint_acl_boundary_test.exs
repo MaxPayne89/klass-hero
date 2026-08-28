@@ -69,24 +69,24 @@ defmodule Mix.Tasks.LintAclBoundaryTest do
       assert LintAclBoundary.violations(dir) == []
     end
 
-    # read_table.ex quotes `schema "provider_programs"` in its own moduledoc. Without the
+    # read_table.ex quotes `schema "provider_session_details"` in its own moduledoc. Without the
     # exclusion that quote registers Shared as the owner of a table Provider declares, and
     # every Provider read of its OWN table starts reading as cross-context. The paired
     # assertion is what makes this non-vacuous: identical content under any other basename
     # does mis-assign ownership, so the exclusion is doing the work.
     @tag :tmp_dir
     test "read_table.ex is excluded so its usage example does not claim ownership", %{tmp_dir: dir} do
-      write(dir, "shared/read_table.ex", schema_in_moduledoc("provider_programs"))
-      write(dir, "provider/provider_program.ex", schema("provider_programs"))
-      write(dir, "provider/reader.ex", query_over("provider_programs"))
+      write(dir, "shared/read_table.ex", schema_in_moduledoc("provider_session_details"))
+      write(dir, "provider/session_detail.ex", schema("provider_session_details"))
+      write(dir, "provider/reader.ex", query_over("provider_session_details"))
 
       assert LintAclBoundary.violations(dir) == []
 
-      write(dir, "shared/impostor.ex", schema_in_moduledoc("provider_programs"))
+      write(dir, "shared/impostor.ex", schema_in_moduledoc("provider_session_details"))
 
       assert [{path, message}] = LintAclBoundary.violations(dir)
       assert Path.basename(path) == "reader.ex"
-      assert message =~ "shared's `provider_programs`"
+      assert message =~ "shared's `provider_session_details`"
     end
 
     test "the real tree satisfies the convention" do

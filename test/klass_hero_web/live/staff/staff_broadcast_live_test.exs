@@ -22,21 +22,15 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
         })
 
       # Write model (programs table) for enrollment FK
-      program_write =
+      program =
         insert(:program_schema, provider_id: provider.id, category: "sports")
 
       # Read model (program_listings table) for dashboard/catalog queries
-      program =
-        insert(:program_listing_schema,
-          id: program_write.id,
-          provider_id: provider.id,
-          category: "sports"
-        )
 
       # Compose is gated on this row since #1323, not on `tags` matching the category.
       program_assignment_fixture(%{
         provider_id: provider.id,
-        program_id: program_write.id,
+        program_id: program.id,
         staff_member_id: staff.id
       })
 
@@ -121,8 +115,6 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
           end_date: Date.add(Date.utc_today(), -20)
         )
 
-      insert(:program_listing_schema, id: closed.id, provider_id: provider.id, category: "sports")
-
       program_assignment_fixture(%{
         provider_id: provider.id,
         program_id: closed.id,
@@ -143,12 +135,6 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
           provider_id: provider.id,
           category: "sports"
         )
-
-      insert(:program_listing_schema,
-        id: unassigned_program.id,
-        provider_id: provider.id,
-        category: "sports"
-      )
 
       assert {:error, {:live_redirect, %{to: "/staff/dashboard", flash: flash}}} =
                live(conn, ~p"/staff/programs/#{unassigned_program.id}/broadcast")

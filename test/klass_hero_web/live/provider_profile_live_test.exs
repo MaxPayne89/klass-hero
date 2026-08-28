@@ -99,9 +99,9 @@ defmodule KlassHeroWeb.ProviderProfileLiveTest do
   describe "programs" do
     test "lists current programs and excludes ended ones", %{conn: conn} do
       provider = active_provider()
-      insert(:program_listing_schema, provider_id: provider.id, title: "Youth Fitness")
+      insert(:program_schema, provider_id: provider.id, title: "Youth Fitness")
 
-      insert(:program_listing_schema,
+      insert(:program_schema,
         provider_id: provider.id,
         title: "Finished Camp",
         end_date: Date.add(Date.utc_today(), -1)
@@ -123,7 +123,7 @@ defmodule KlassHeroWeb.ProviderProfileLiveTest do
 
     test "navigates to a program", %{conn: conn} do
       provider = active_provider()
-      program = insert(:program_listing_schema, provider_id: provider.id)
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/providers/#{provider.id}")
 

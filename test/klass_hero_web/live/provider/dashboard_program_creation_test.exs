@@ -6,7 +6,6 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
 
   alias KlassHero.Enrollment.EnrollmentPolicy
   alias KlassHero.ProgramCatalog.Program
-  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
 
@@ -110,12 +109,6 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
           default_session_capacity: 12
         )
 
-      insert(:program_listing_schema,
-        id: program.id,
-        provider_id: provider.id,
-        title: program.title
-      )
-
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
       view
@@ -142,13 +135,8 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
           subtitle: "For beginners, no experience needed"
         )
 
-      # The provider's table reads the ProgramListing read table, so the write
+      # The provider's table reads the Program read table, so the write
       # row alone leaves the list empty and the edit button unreachable.
-      insert(:program_listing_schema,
-        id: program.id,
-        provider_id: provider.id,
-        title: program.title
-      )
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
@@ -531,7 +519,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
     # The regression #1345 reports: the update path reported success while the
     # policy write was rejected and the old limits stayed in force.
     test "warns when an edit's capacity is rejected", %{conn: conn, provider: provider} do
-      program = seed_program_with_listing(provider.id, "Rejected Capacity Program")
+      program = seed_program(provider.id, "Rejected Capacity Program")
 
       {:ok, _policy} =
         KlassHero.Enrollment.set_enrollment_policy(%{program_id: program.id, max_enrollment: 20})
@@ -576,7 +564,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       @edit_case %{params: policy_params, kind: kind, message: message}
 
       test "editing with #{label} flashes the matching outcome", %{conn: conn, provider: provider} do
-        program = seed_program_with_listing(provider.id, "Outcome Program")
+        program = seed_program(provider.id, "Outcome Program")
 
         {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
@@ -641,22 +629,14 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
   # deliberately does not (#1307). Nothing pinned that divergence before, so a
   # naive fold of the three row-rebuild paths would have landed green.
   describe "the saved row reflects just-submitted capacity" do
-    defp seed_program_with_listing(provider_id, title) do
-      id = Ecto.UUID.generate()
-
-      attrs = %{
-        id: id,
+    defp seed_program(provider_id, title) do
+      insert(:program_schema,
         title: title,
         description: "Seeded for a capacity row assertion",
         category: "arts",
         price: Decimal.new("50.00"),
         provider_id: provider_id
-      }
-
-      program = Repo.insert!(struct!(Program, Map.put(attrs, :origin, :self_posted)))
-      Repo.insert!(struct!(ProgramListing, attrs))
-
-      program
+      )
     end
 
     # The one case where the two sources actually disagree. A rejected capacity
@@ -668,7 +648,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       conn: conn,
       provider: provider
     } do
-      program = seed_program_with_listing(provider.id, "Kept Policy Program")
+      program = seed_program(provider.id, "Kept Policy Program")
 
       {:ok, _policy} =
         KlassHero.Enrollment.set_enrollment_policy(%{program_id: program.id, max_enrollment: 20})
@@ -724,7 +704,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
     end
 
     test "an edited program's row shows the raised capacity", %{conn: conn, provider: provider} do
-      program = seed_program_with_listing(provider.id, "Raise My Capacity")
+      program = seed_program(provider.id, "Raise My Capacity")
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
@@ -749,28 +729,15 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
   end
 
   describe "program creation without limits" do
-    defp seed_programs_with_listing(provider_id, count) do
+    defp seed_programs(provider_id, count) do
       for i <- 1..count do
-        id = Ecto.UUID.generate()
-
-        Repo.insert!(%Program{
-          id: id,
-          title: "Program #{i}",
-          description: "Description for program #{i}",
-          category: "arts",
-          price: Decimal.new("50.00"),
-          provider_id: provider_id,
-          origin: :self_posted
-        })
-
-        Repo.insert!(%ProgramListing{
-          id: id,
+        insert(:program_schema,
           title: "Program #{i}",
           description: "Description for program #{i}",
           category: "arts",
           price: Decimal.new("50.00"),
           provider_id: provider_id
-        })
+        )
       end
     end
 
@@ -779,7 +746,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       conn: conn,
       provider: provider
     } do
-      seed_programs_with_listing(provider.id, 2)
+      seed_programs(provider.id, 2)
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
@@ -787,7 +754,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
     end
 
     test "creates a program beyond the former starter cap", %{conn: conn, provider: provider} do
-      seed_programs_with_listing(provider.id, 2)
+      seed_programs(provider.id, 2)
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
@@ -819,7 +786,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
     end
 
     test "clears the stored limits when nobody is enrolled", %{conn: conn, provider: provider} do
-      program = seed_program_with_listing(provider.id, "Uncap Me")
+      program = seed_program(provider.id, "Uncap Me")
 
       {:ok, _} =
         KlassHero.Enrollment.set_enrollment_policy(%{
@@ -846,7 +813,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
     end
 
     test "keeps clearing the minimum alone unguarded", %{conn: conn, provider: provider} do
-      program = seed_program_with_listing(provider.id, "Drop The Minimum")
+      program = seed_program(provider.id, "Drop The Minimum")
 
       {:ok, _} =
         KlassHero.Enrollment.set_enrollment_policy(%{
@@ -873,7 +840,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
 
   describe "removing a capacity cap with children already enrolled" do
     defp enrolled_capped_program(provider_id, title, enrolled) do
-      program = seed_program_with_listing(provider_id, title)
+      program = seed_program(provider_id, title)
 
       {:ok, _} =
         KlassHero.Enrollment.set_enrollment_policy(%{program_id: program.id, max_enrollment: 12})

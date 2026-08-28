@@ -23,7 +23,7 @@ defmodule KlassHero.Shared.Tracing do
   """
 
   # Module-name segments stripped before a span is named, so a span reads
-  # `Provider.ProviderPrograms.handle_event/2` rather than repeating the tree.
+  # `Provider.ProviderSessionDetails.handle_event/2` rather than repeating the tree.
   #
   # This list is scaffolding for the nested context layout and should shrink
   # with it — but only once *every* context is flat. While contexts still carry

@@ -68,8 +68,6 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
             {"Piano for Beginners", ~T[15:00:00], ~T[16:00:00]}
           ] do
         program = insert(:program_schema, provider_id: provider.id, title: title)
-        # Titles reach the page through the ProviderPrograms read model, not `programs`.
-        insert(:program_listing_schema, id: program.id, provider_id: provider.id, title: title)
 
         insert(:program_session_schema,
           program_id: program.id,
@@ -92,7 +90,6 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
     test "shows how many children are on each session's roster", %{conn: conn, provider: provider} do
       program = insert(:program_schema, provider_id: provider.id, title: "Junior Choir")
-      insert(:program_listing_schema, id: program.id, provider_id: provider.id, title: "Junior Choir")
 
       # Explicitly uncapped, overriding the factory's default Session Capacity:
       # this pins the plain-count wording, which is what most sessions in
@@ -210,8 +207,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       scope: scope
     } do
       program = insert(:program_schema, provider_id: provider.id)
-      # Need listing so mount can build provider_program_ids MapSet
-      _listing = insert(:program_listing_schema, id: program.id, provider_id: provider.id)
+      # Need program so mount can build provider_program_ids MapSet
 
       session =
         insert(:program_session_schema,
@@ -239,7 +235,6 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       provider: provider
     } do
       program = insert(:program_schema, provider_id: provider.id)
-      _listing = insert(:program_listing_schema, id: program.id, provider_id: provider.id)
 
       session =
         insert(:program_session_schema,
@@ -268,7 +263,6 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       scope: scope
     } do
       program = insert(:program_schema, provider_id: provider.id)
-      _listing = insert(:program_listing_schema, id: program.id, provider_id: provider.id)
 
       session =
         insert(:program_session_schema,
@@ -294,7 +288,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
     setup :register_and_log_in_provider
 
     test "navigating to /provider/sessions/new shows modal", %{conn: conn, provider: provider} do
-      _listing = insert(:program_listing_schema, provider_id: provider.id)
+      _program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
 
@@ -303,7 +297,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
     end
 
     test "navigating back to /provider/sessions hides modal", %{conn: conn, provider: provider} do
-      _listing = insert(:program_listing_schema, provider_id: provider.id)
+      _program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
       assert has_element?(view, "#create-session-modal")
@@ -316,14 +310,11 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      listing =
-        insert(:program_listing_schema,
+      _program =
+        insert(:program_schema,
           provider_id: provider.id,
           title: "Art Workshop"
         )
-
-      _program =
-        insert(:program_schema, id: listing.id, provider_id: provider.id, title: "Art Workshop")
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
 
@@ -334,7 +325,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      _listing = insert(:program_listing_schema, provider_id: provider.id)
+      _program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
 
@@ -354,8 +345,8 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      listing =
-        insert(:program_listing_schema,
+      program =
+        insert(:program_schema,
           provider_id: provider.id,
           title: "Art Workshop",
           meeting_start_time: ~T[09:00:00],
@@ -363,14 +354,12 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
           location: "Room 101"
         )
 
-      _program = insert(:program_schema, id: listing.id, provider_id: provider.id)
-
       {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
 
       # Select the program — triggers validate_session with pre-fill
       render_change(view, "validate_session", %{
         "session" => %{
-          "program_id" => listing.id,
+          "program_id" => program.id,
           "session_date" => Date.to_iso8601(Date.utc_today()),
           "start_time" => "",
           "end_time" => "",
@@ -390,8 +379,8 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      listing =
-        insert(:program_listing_schema,
+      program =
+        insert(:program_schema,
           provider_id: provider.id,
           title: "Art Workshop",
           meeting_start_time: ~T[09:00:00],
@@ -399,14 +388,12 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
           location: "Room 101"
         )
 
-      _program = insert(:program_schema, id: listing.id, provider_id: provider.id)
-
       {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
 
       # Select the program with already-filled start_time — should not overwrite
       render_change(view, "validate_session", %{
         "session" => %{
-          "program_id" => listing.id,
+          "program_id" => program.id,
           "session_date" => Date.to_iso8601(Date.utc_today()),
           "start_time" => "10:00",
           "end_time" => "",
@@ -431,13 +418,11 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      listing =
-        insert(:program_listing_schema,
+      program =
+        insert(:program_schema,
           provider_id: provider.id,
           title: "Art Workshop"
         )
-
-      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
 
@@ -465,8 +450,8 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      # Need at least one listing for the provider so the form renders
-      _listing = insert(:program_listing_schema, provider_id: provider.id)
+      # Need at least one program for the provider so the form renders
+      _program = insert(:program_schema, provider_id: provider.id)
 
       other_provider = insert(:provider_profile_schema)
       other_program = insert(:program_schema, provider_id: other_provider.id)
@@ -490,15 +475,14 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
     end
 
     test "shows error for invalid time range", %{conn: conn, provider: provider} do
-      listing = insert(:program_listing_schema, provider_id: provider.id)
-      _program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
 
       view
       |> form("#create-session-form", %{
         "session" => %{
-          "program_id" => listing.id,
+          "program_id" => program.id,
           "session_date" => Date.to_iso8601(Date.utc_today()),
           "start_time" => "14:00",
           "end_time" => "10:00"
@@ -519,13 +503,11 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      listing =
-        insert(:program_listing_schema,
+      program =
+        insert(:program_schema,
           provider_id: provider.id,
           title: "Art Workshop"
         )
-
-      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
 
       session =
         insert(:program_session_schema,
@@ -547,8 +529,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      listing = insert(:program_listing_schema, provider_id: provider.id)
-      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+      program = insert(:program_schema, provider_id: provider.id)
 
       tomorrow = Date.add(Date.utc_today(), 1)
 
@@ -576,8 +557,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       conn: conn,
       provider: provider
     } do
-      listing = insert(:program_listing_schema, provider_id: provider.id)
-      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+      program = insert(:program_schema, provider_id: provider.id)
       tomorrow = Date.add(Date.utc_today(), 1)
 
       session =
@@ -594,8 +574,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
     end
 
     test "an unrelated participation event does not crash the view", %{conn: conn, provider: provider} do
-      listing = insert(:program_listing_schema, provider_id: provider.id)
-      _program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+      _program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions")
 

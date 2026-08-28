@@ -41,11 +41,9 @@ defmodule KlassHero.Factory do
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionNote
   alias KlassHero.ProgramCatalog.Program
-  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.SessionStaffAssignment
-  alias KlassHero.Provider.SessionStats
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
 
@@ -106,40 +104,6 @@ defmodule KlassHero.Factory do
       pricing_period: "per month",
       end_date: nil,
       origin: :self_posted
-    }
-  end
-
-  @doc """
-  Factory for creating ProgramListing Ecto schemas (CQRS read model).
-
-  Used in tests that interact with the denormalized program_listings read table.
-  No FK constraints — provider_id is a plain UUID.
-
-  ## Examples
-
-      schema = build(:program_listing_schema)
-      schema = insert(:program_listing_schema, title: "Soccer Camp", category: "sports")
-  """
-  def program_listing_schema_factory do
-    %ProgramListing{
-      id: Ecto.UUID.generate(),
-      title: sequence(:program_listing_title, &"Test Program #{&1}"),
-      description: "A great program for kids to learn and have fun",
-      category: "education",
-      age_range: "6-10 years",
-      price: Decimal.new("100.00"),
-      pricing_period: "per month",
-      location: nil,
-      cover_image_url: nil,
-      start_date: nil,
-      end_date: nil,
-      meeting_days: ["Monday", "Wednesday", "Friday"],
-      meeting_start_time: ~T[15:00:00],
-      meeting_end_time: ~T[17:00:00],
-      season: nil,
-      registration_start_date: nil,
-      registration_end_date: nil,
-      provider_id: Ecto.UUID.generate()
     }
   end
 
@@ -543,30 +507,6 @@ defmodule KlassHero.Factory do
       session_id: session.id,
       staff_member_id: staff.id,
       assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
-    }
-  end
-
-  # =============================================================================
-  # Provider Context - Session Stats Factories
-  # =============================================================================
-
-  @doc """
-  Factory for `KlassHero.Provider.SessionStats` rows (read model, no FK constraints).
-
-  Backs tests over the denormalized provider_session_stats table.
-
-  ## Examples
-
-      schema = insert(:session_stats)
-      schema = insert(:session_stats, sessions_completed_count: 5)
-  """
-  def session_stats_factory do
-    %SessionStats{
-      id: Ecto.UUID.generate(),
-      provider_id: Ecto.UUID.generate(),
-      program_id: Ecto.UUID.generate(),
-      program_title: sequence(:session_stats_title, &"Program #{&1}"),
-      sessions_completed_count: 0
     }
   end
 

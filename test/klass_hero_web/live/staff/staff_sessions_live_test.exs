@@ -35,26 +35,10 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
   end
 
   defp build_program(provider, attrs) do
-    category = Keyword.get(attrs, :category, "sports")
-
-    # `end_date` belongs on the write row: closure is read from `programs`, never
-    # from the projection (#1082).
-    program =
-      insert(:program_schema,
-        provider_id: provider.id,
-        category: category,
-        end_date: Keyword.get(attrs, :end_date)
-      )
-
     insert(
-      :program_listing_schema,
-      Keyword.merge(
-        [id: program.id, provider_id: provider.id, category: category],
-        Keyword.take(attrs, [:title])
-      )
+      :program_schema,
+      Keyword.merge([provider_id: provider.id, category: "sports"], attrs)
     )
-
-    program
   end
 
   defp session_on(program, date, status) do

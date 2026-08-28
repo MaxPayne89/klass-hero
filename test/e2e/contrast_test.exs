@@ -60,7 +60,7 @@ defmodule KlassHeroWeb.E2E.ContrastTest do
               "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC"
         )
 
-      insert(:program_listing_schema, provider_id: provider.id, title: "Youth Fitness")
+      insert(:program_schema, provider_id: provider.id, title: "Youth Fitness")
 
       session
       |> visit("/providers/#{provider.id}")

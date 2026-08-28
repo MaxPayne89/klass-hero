@@ -125,14 +125,34 @@ not copy this into one.
 
 ## CQRS Read Models
 
-- Projection GenServers in `projections/` subscribe to events and denormalize into dedicated read tables.
-- **Three read-side kinds, three homes.** Getting this wrong is what produced #1254/#1258, so pick deliberately:
+CQRS here means a read model separate from the write model. It does **not** mean a
+second table maintained asynchronously — that is one implementation of it, and the
+expensive one. Two of the three kinds below need no projection at all.
+
+- **A projection is the exception, and needs justifying.** Four were retired by
+  ADR-0023 because they earned nothing: `program_listings` mirrored
+  `programs` 1:1 inside the same context, `provider_programs` mirrored three of its
+  columns into Provider, `provider_session_stats` denormalised one integer, and
+  `messaging_enrolled_children` had no reader outside another projection. Before
+  adding one, answer: what query cannot be served by a facade call (ADR-0015) or a
+  same-context query, at the scale this system actually runs at?
+
+- **What a projection costs, so the trade is visible.** Two implementations of the
+  same read — `handle_event/2` incrementally and `bootstrap_impl/0` from scratch —
+  which must agree forever; three bugs (#782, #1299, #1329) were those two paths
+  disagreeing. Bootstrap also *hides* failure: a deploy re-bootstraps and self-heals
+  the table while the pipeline stays broken, so zero observed drift is the symptom
+  rather than evidence of health. Every row in `undelivered_events` to date has been
+  a projection dispatch.
+
+- **Three read-side kinds, three homes.** Getting this wrong is what produced
+  #1254/#1258, so pick deliberately:
 
   | Kind | Home | Shape | Example |
   |---|---|---|---|
-  | Projection read **table** | context root | Ecto schema **is** the DTO; **no changeset** — the projection owns every write; string columns are **`text`**, never a capped `varchar` | `provider/provider_program.ex`, `messaging/enrolled_child.ex` |
+  | Query over the **write** table | the context module | ordinary `Repo` query returning the entity struct; the default | `program_catalog.ex`'s `list_programs_for_provider/1` |
   | Query-shaped struct over **write** tables | `read_models/` | plain struct, no schema twin, no table; built by a `select:` or a `from_*/1` narrowing | `provider/read_models/staff_membership.ex` |
-  | Event-maintained table with **no** projection | context root + an ops submodule | schema **keeps** its changeset, because a handler writes it directly | *none — see below* |
+  | Projection read **table** | context root, or `projections/` | Ecto schema **is** the DTO; **no changeset** — the projection owns every write; string columns are **`text`**, never a capped `varchar` | `provider/session_detail.ex` |
 
 - **A length cap on a read table is unenforceable, so it is a liability.** The
   no-changeset rule is what makes it one: a `varchar(n)` there cannot reject an
@@ -143,21 +163,17 @@ not copy this into one.
   `test/klass_hero/shared/read_table_column_types_test.exs`, which reads
   `information_schema` — `mix lint_read_tables` is text-based and cannot see it.
 
-- **The third kind currently has no instance, and that is a warning, not an
-  omission.** Its only example was `messaging/program_staff_participant.ex` +
-  `messaging/staff_participants.ex`, a mirror of Provider's staffing that #1321
-  deleted. A table with no projection has no bootstrap and no rebuild, so nothing
-  but an event can ever correct it — and three bugs (#1309, #1312, #1320) were
-  drift between that copy and its source. Before reaching for this kind, check
-  whether the data is **derivable** from another context: if it is, call that
-  context's facade (ADR-0015) and keep no copy. Reserve the kind for state that is
-  genuinely yours and has no source to re-derive from — rows carrying their own
-  history, like join/leave times or read receipts.
+- **A table maintained by events but with no projection is worse still.** It has no
+  bootstrap and no rebuild, so nothing but an event can ever correct it. Its only
+  instance was `messaging/program_staff_participant.ex`, a mirror of Provider's
+  staffing that #1321 deleted after three drift bugs (#1309, #1312, #1320). If the
+  data is derivable from another context, call that context's facade and keep no
+  copy.
 
 - **Queries go in the context module or a context-root submodule** (`provider/programs.ex`, `provider/assignments.ex`) — never behind a per-table repository wrapper. A read-only module that just wraps `where`/`order_by`/`Repo.all` is indirection without a payer.
 - No mappers, and no separate DTO twinned with a projection schema. If you are writing a `to_dto/1`, the two modules should be one.
-- Build new projections on `KlassHero.Shared.Projection` (base macro); optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). Declare `:topics` in `use Projection, ...` and implement `bootstrap_impl/0` and `handle_event/2`.
-- Canonical examples: `provider/projections/provider_programs.ex` for the projection GenServer, and `program_catalog/program_listing.ex` for the read table a projection maintains — copy the latter for the schema-is-the-DTO shape. Program Catalog, Messaging, and Provider all have projections.
+- Build a projection — once justified — on `KlassHero.Shared.Projection` (base macro); optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). Declare `:topics` in `use Projection, ...` and implement `bootstrap_impl/0` and `handle_event/2`.
+- Canonical example: `provider/projections/provider_session_details.ex` with its read table `provider/session_detail.ex`. It is the one that earns its place — a six-table join across three contexts with two LATERALs, and genuinely incremental attendance counters. Provider and Messaging are the only contexts with a projection left.
 
 ## Domain Modeling Idioms
 
@@ -174,7 +190,7 @@ Schema-as-struct itself is covered above under `## Context Layout` and `## Recom
 ## Recommended Reads
 
 - `lib/klass_hero/provider/staff_member.ex` — schema-as-struct with inlined functional core
-- `lib/klass_hero/program_catalog/program_listing.ex` — read-table schema as the display DTO
-- `lib/klass_hero/provider/projections/provider_programs.ex` — projection pattern
+- `lib/klass_hero/provider/session_detail.ex` — read-table schema as the display DTO
+- `lib/klass_hero/provider/projections/provider_session_details.ex` — projection pattern
 - `lib/klass_hero/shared/` — event infrastructure, projection macro, interaction/tracing
 - `config/config.exs` — `:event_consumers` registry (DI port maps are gone)

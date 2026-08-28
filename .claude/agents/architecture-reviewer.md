@@ -46,7 +46,7 @@ context/
 ├── <entity>.ex             # Schema-as-struct: Ecto schema + struct + functional core
 │                           #   (validators, state machines). e.g. provider/staff_member.ex
 ├── <read_table>.ex         # Projection read-table schema: IS the DTO, no changeset —
-│                           #   the projection owns every write. e.g. program_catalog/program_listing.ex
+│                           #   the projection owns every write. e.g. provider/session_detail.ex
 ├── <use_case>.ex           # Command/query modules at the root
 ├── events.ex               # Factory for this context's integration events
 ├── <handler>.ex            # Consumes another context's events — named for what it
@@ -109,7 +109,7 @@ validators returning `{:error, [message]}`, state machines, formatters).
 **Not an entity — skip it:** a projection read-table schema also sits at the context root and
 also `use Ecto.Schema`, but has **no changeset on purpose** (the projection owns every write).
 Its moduledoc says so. Do NOT flag a missing changeset there — that is the correct shape, not a
-violation. e.g. `program_catalog/program_listing.ex`, `provider/provider_program.ex`.
+violation. e.g. `provider/session_detail.ex`, `messaging/conversation_summary.ex`.
 
 **Violations to flag:**
 - A new aggregate split into `domain/models/<x>.ex` (struct) + `adapters/.../schemas/<x>_schema.ex` (schema) + a mapper — this is the removed DDD pattern
@@ -191,8 +191,9 @@ because that means the two have drifted.
    `adapters/driven/projections/` tree alike
 2. Confirm `use KlassHero.Shared.Projection, ...` with a `:topics` list
 3. Confirm `bootstrap_impl/0` and `handle_event/2` are implemented
-4. Reference: `lib/klass_hero/provider/projections/provider_programs.ex`
-   (`accounts` has no projection yet, since none of its kinds have reached 3 files)
+4. Reference: `lib/klass_hero/provider/projections/provider_session_details.ex`
+   (most contexts have no projection — see the CQRS section of `domain-architecture.md`
+   for why one now needs justifying)
 5. Flag hand-rolled projection GenServers that bypass the macro
 
 ## Check 7: Read-model DTO purity

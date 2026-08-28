@@ -9,7 +9,6 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummaries
   alias KlassHero.Messaging.ConversationSummary
-  alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Messaging.Events
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
@@ -149,15 +148,12 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
       insert_participant(conversation_id, user_id: parent_user.id, joined_at: now())
       insert_participant(conversation_id, user_id: provider_user.id, joined_at: now())
 
-      Repo.insert!(%EnrolledChild{
-        id: Ecto.UUID.generate(),
-        parent_user_id: parent_user.id,
+      insert(:enrollment_schema,
         program_id: program.id,
         child_id: child.id,
-        child_first_name: "Emma",
-        inserted_at: now(),
-        updated_at: now()
-      })
+        parent_id: parent.id,
+        status: :confirmed
+      )
 
       _ = restart_for_bootstrap(:bootstrap_enrolled_children)
 
@@ -1425,6 +1421,138 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
     pid = start_supervised!({ConversationSummaries, name: name}, id: id)
     :sys.get_state(pid)
     pid
+  end
+
+  describe "enrolled child names stay current on an existing conversation" do
+    # The names are denormalised onto a row written at `conversation_created`.
+    # Everything that changes the roster afterwards has to reach that row, or a
+    # provider's thread keeps showing the roster it had the day it opened —
+    # which is what a deleted mirror projection used to prevent, and what its
+    # deleted test used to pin.
+    setup do
+      parent_user = user_fixture(name: "Sarah Johnson")
+      provider_user = user_fixture(name: "Claudia Wolf")
+
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      conversation_id = Ecto.UUID.generate()
+
+      insert_conversation(
+        id: conversation_id,
+        type: :direct,
+        provider_id: provider.id,
+        program_id: program.id
+      )
+
+      insert_participant(conversation_id, user_id: parent_user.id, joined_at: now())
+      insert_participant(conversation_id, user_id: provider_user.id, joined_at: now())
+
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        participant_ids: [parent_user.id, provider_user.id],
+        type: :direct,
+        provider_id: provider.id,
+        program_id: program.id
+      })
+
+      %{
+        conversation_id: conversation_id,
+        parent: parent,
+        parent_user: parent_user,
+        program: program
+      }
+    end
+
+    defp names_on(conversation_id) do
+      ConversationSummary
+      |> where([s], s.conversation_id == ^conversation_id)
+      |> select([s], s.enrolled_child_names)
+      |> Repo.all()
+      |> Enum.uniq()
+    end
+
+    defp enrol(child, ctx, status \\ :confirmed) do
+      insert(:enrollment_schema,
+        program_id: ctx.program.id,
+        child_id: child.id,
+        parent_id: ctx.parent.id,
+        status: status
+      )
+    end
+
+    test "a sibling enrolled after the thread opened appears on it", ctx do
+      first = insert(:child_schema, first_name: "Emma")
+      insert(:child_guardian_schema, child_id: first.id, guardian_id: ctx.parent.id)
+      enrol(first, ctx)
+
+      dispatch(:enrollment_created, %{
+        parent_user_id: ctx.parent_user.id,
+        program_id: ctx.program.id,
+        child_id: first.id
+      })
+
+      assert names_on(ctx.conversation_id) == [["Emma"]]
+
+      sibling = insert(:child_schema, first_name: "Anton")
+      insert(:child_guardian_schema, child_id: sibling.id, guardian_id: ctx.parent.id)
+      enrol(sibling, ctx)
+
+      dispatch(:enrollment_created, %{
+        parent_user_id: ctx.parent_user.id,
+        program_id: ctx.program.id,
+        child_id: sibling.id
+      })
+
+      assert names_on(ctx.conversation_id) == [["Anton", "Emma"]]
+    end
+
+    test "renaming a child renames them on the thread", ctx do
+      child = insert(:child_schema, first_name: "Emma")
+      insert(:child_guardian_schema, child_id: child.id, guardian_id: ctx.parent.id)
+      enrol(child, ctx)
+
+      dispatch(:enrollment_created, %{
+        parent_user_id: ctx.parent_user.id,
+        program_id: ctx.program.id,
+        child_id: child.id
+      })
+
+      assert names_on(ctx.conversation_id) == [["Emma"]]
+
+      child |> Ecto.Changeset.change(%{first_name: "Emmi"}) |> Repo.update!()
+
+      dispatch(:child_updated, %{child_id: child.id, first_name: "Emmi"})
+
+      assert names_on(ctx.conversation_id) == [["Emmi"]]
+    end
+
+    test "a cancelled enrollment drops that child from the thread", ctx do
+      staying = insert(:child_schema, first_name: "Emma")
+      leaving = insert(:child_schema, first_name: "Anton")
+
+      for child <- [staying, leaving] do
+        insert(:child_guardian_schema, child_id: child.id, guardian_id: ctx.parent.id)
+      end
+
+      enrol(staying, ctx)
+      cancelled = enrol(leaving, ctx)
+
+      dispatch(:enrollment_created, %{
+        parent_user_id: ctx.parent_user.id,
+        program_id: ctx.program.id,
+        child_id: leaving.id
+      })
+
+      assert names_on(ctx.conversation_id) == [["Anton", "Emma"]]
+
+      cancelled |> Ecto.Changeset.change(%{status: :cancelled}) |> Repo.update!()
+
+      dispatch(:enrollment_cancelled, %{program_id: ctx.program.id, child_id: leaving.id})
+
+      assert names_on(ctx.conversation_id) == [["Emma"]]
+    end
   end
 
   # Builds a messaging integration event, defaulting the entity to

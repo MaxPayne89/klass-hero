@@ -9,7 +9,6 @@ defmodule KlassHero.ProviderFixtures do
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
-  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Provider.Vetting
@@ -292,25 +291,6 @@ defmodule KlassHero.ProviderFixtures do
       |> Repo.insert()
 
     persisted
-  end
-
-  @doc """
-  Inserts a `provider_programs` projection row for testing.
-
-  Accepts `program_id`, `provider_id`, `name`. Defaults provided.
-  Returns the inserted schema struct.
-  """
-  def provider_program_projection_fixture(attrs \\ %{}) do
-    attrs_map = Map.new(attrs)
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    Repo.insert!(%ProviderProgram{
-      program_id: attrs_map[:program_id] || Ecto.UUID.generate(),
-      provider_id: attrs_map[:provider_id] || raise("provider_id is required"),
-      name: attrs_map[:name] || "Test Program #{System.unique_integer([:positive])}",
-      inserted_at: now,
-      updated_at: now
-    })
   end
 
   @doc """

@@ -12,6 +12,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
 
   use KlassHeroWeb, :live_view
 
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.ProviderProfile
@@ -37,7 +38,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
   defp mount_for_provider(socket, provider, params) do
     case resolve_preselection(params, provider.id) do
       {:ok, preselected} ->
-        programs = Provider.list_provider_programs(provider.id)
+        programs = ProgramCatalog.list_programs_for_provider(provider.id)
 
         socket =
           socket
@@ -66,7 +67,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
   end
 
   defp resolve_preselection(%{"program_id" => program_id}, provider_id) when is_binary(program_id) do
-    case Provider.get_provider_program(program_id, provider_id) do
+    case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
       {:ok, program} -> {:ok, {:program, program}}
       {:error, :not_found} -> {:error, :preselection_invalid}
     end
@@ -77,7 +78,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
   defp empty_form(preselected) do
     program_id =
       case preselected do
-        {:program, program} -> program.program_id
+        {:program, program} -> program.id
         _ -> nil
       end
 
@@ -92,7 +93,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
     to_form(params, as: "incident")
   end
 
-  defp selected_program_id({:program, program}), do: program.program_id
+  defp selected_program_id({:program, program}), do: program.id
   defp selected_program_id(_), do: nil
 
   @impl true
@@ -297,7 +298,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
             field={@form[:program_id]}
             type="select"
             label={gettext("Program")}
-            options={Enum.map(@programs, &{&1.name, &1.program_id})}
+            options={Enum.map(@programs, &{&1.title, &1.id})}
             prompt={gettext("Select a program")}
             required
           />

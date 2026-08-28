@@ -345,6 +345,25 @@ defmodule KlassHero.Participation do
     end
   end
 
+  @doc """
+  Counts completed sessions across the given programs.
+
+  Aggregates over Participation's own `program_sessions` and nothing else — a
+  caller holding a `provider_id` resolves it to program ids through
+  `ProgramCatalog.list_program_ids_for_provider/1` first, the same two-step
+  `resolve_provider_scope/1` already uses. That keeps the provider→program
+  relationship in the context that owns it rather than joining across schemas.
+  """
+  @spec count_completed_sessions([String.t()]) :: non_neg_integer()
+  def count_completed_sessions([]), do: 0
+
+  def count_completed_sessions(program_ids) when is_list(program_ids) do
+    ProgramSession
+    |> where([s], s.program_id in ^program_ids and s.status == :completed)
+    |> select([s], count(s.id))
+    |> Repo.one()
+  end
+
   # Statuses that count toward the attendance tally ("has attended", not "currently present").
   @admin_checked_in_statuses ~w(checked_in checked_out)
 
@@ -604,6 +623,14 @@ defmodule KlassHero.Participation do
   """
   @spec child_topic(String.t()) :: String.t()
   defdelegate child_topic(child_id), to: Notifications
+
+  @doc """
+  Returns the provider stats topic — the topic carrying `:session_stats_updated` to
+  the provider overview, whose completed-session counter is a live count. The
+  overview subscribes; `Notifications` publishes on `:session_completed`.
+  """
+  @spec stats_topic(String.t()) :: String.t()
+  defdelegate stats_topic(provider_id), to: Notifications
 
   @doc """
   Seeds a session roster with the program's enrolled children. Best-effort: always returns `:ok`.

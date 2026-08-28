@@ -14,47 +14,13 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias KlassHero.Enrollment.BulkEnrollmentInvite
-  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.Projections.ProviderSessionDetails
   alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
 
   setup :register_and_log_in_provider
 
-  # Trigger: dashboard reads programs from program_listings (CQRS read model)
-  # Why: write-side program_schema alone won't appear in the programs tab
-  # Outcome: inserts into both programs (for FK constraints) and program_listings (for display)
-  defp insert_program_with_listing(attrs) do
-    program = KlassHero.Factory.insert(:program_schema, attrs)
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    %ProgramListing{}
-    |> Ecto.Changeset.change(%{
-      id: program.id,
-      title: program.title,
-      description: program.description,
-      category: program.category,
-      age_range: program.age_range,
-      price: program.price,
-      pricing_period: program.pricing_period,
-      location: program.location,
-      cover_image_url: program.cover_image_url,
-      start_date: program.start_date,
-      end_date: program.end_date,
-      meeting_days: program.meeting_days || [],
-      meeting_start_time: program.meeting_start_time,
-      meeting_end_time: program.meeting_end_time,
-      season: program.season,
-      registration_start_date: program.registration_start_date,
-      registration_end_date: program.registration_end_date,
-      provider_id: program.provider_id,
-      inserted_at: program.inserted_at || now,
-      updated_at: program.updated_at || now
-    })
-    |> KlassHero.Repo.insert!()
-
-    program
-  end
+  defp insert_program(attrs), do: KlassHero.Factory.insert(:program_schema, attrs)
 
   # Trigger: sessions modal reads from provider_session_details (event-driven projection)
   # Why: projections are disabled in the test env (start_projections: false); we start
@@ -66,7 +32,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     attrs_map = Map.new(attrs)
     title = Map.get(attrs_map, :title, "Test Program")
 
-    program = insert_program_with_listing(provider_id: provider.id, title: title)
+    program = insert_program(provider_id: provider.id, title: title)
 
     session =
       KlassHero.Factory.insert(:program_session_schema,
@@ -306,7 +272,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     end
 
     test "programs visible after navigating from team tab", %{conn: conn, provider: provider} do
-      insert_program_with_listing(
+      insert_program(
         title: "Soccer Academy",
         category: "sports",
         provider_id: provider.id
@@ -347,13 +313,13 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
     test "filters programs by search query", %{conn: conn, provider: provider} do
       # Create programs for this provider
-      insert_program_with_listing(
+      insert_program(
         title: "Soccer Academy",
         category: "sports",
         provider_id: provider.id
       )
 
-      insert_program_with_listing(
+      insert_program(
         title: "Art Class",
         category: "arts",
         provider_id: provider.id
@@ -382,7 +348,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   describe "roster modal with tabs" do
     setup %{provider: provider} do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Test Program"
         )
@@ -503,7 +469,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   describe "invites tab content" do
     setup %{provider: provider} do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Test Program"
         )
@@ -674,7 +640,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   describe "invite actions" do
     setup %{provider: provider} do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Test Program"
         )
@@ -720,7 +686,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   describe "single invite form" do
     setup %{provider: provider} do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Single Invite Program"
         )
@@ -862,7 +828,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   describe "close roster" do
     setup %{provider: provider} do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Test Program"
         )
@@ -989,7 +955,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   describe "invite error paths" do
     setup %{provider: provider} do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Test Program"
         )
@@ -1150,7 +1116,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
     setup %{provider: provider} do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Ballsports & Parkour"
         )
@@ -1388,7 +1354,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       provider: provider
     } do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Existing Timed Program",
           meeting_start_time: ~T[14:30:00],
@@ -1438,7 +1404,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       provider: provider
     } do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Restricted Program"
         )
@@ -1496,7 +1462,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       provider: provider
     } do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Unrestricted Program"
         )
@@ -1543,7 +1509,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   describe "roster send message button" do
     setup %{provider: provider} do
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Message Test Program"
         )
@@ -1628,7 +1594,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       conn = log_in_user(conn, user)
 
       program =
-        insert_program_with_listing(
+        insert_program(
           provider_id: provider.id,
           title: "Starter Program"
         )
@@ -1697,7 +1663,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     end
 
     test "renders a row per pending enrollment for this provider", %{conn: conn, provider: provider} do
-      program = insert_program_with_listing(provider_id: provider.id, title: "Soccer Camp")
+      program = insert_program(provider_id: provider.id, title: "Soccer Camp")
       {child, parent} = KlassHero.Factory.insert_child_with_guardian()
 
       enrollment =
@@ -1729,7 +1695,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
     test "approving a pending enrollment confirms it in the DB and flashes success",
          %{conn: conn, provider: provider} do
-      program = insert_program_with_listing(provider_id: provider.id)
+      program = insert_program(provider_id: provider.id)
       {child, parent} = KlassHero.Factory.insert_child_with_guardian()
 
       enrollment =
@@ -1754,7 +1720,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
     test "card refreshes when an :enrollment_confirmed event arrives for this provider",
          %{conn: conn, provider: provider} do
-      program = insert_program_with_listing(provider_id: provider.id)
+      program = insert_program(provider_id: provider.id)
       {child, parent} = KlassHero.Factory.insert_child_with_guardian()
 
       enrollment =
@@ -1784,7 +1750,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
     test "in-memory dedup drops the confirmed card without re-querying the DB",
          %{conn: conn, provider: provider} do
-      program = insert_program_with_listing(provider_id: provider.id)
+      program = insert_program(provider_id: provider.id)
       {child, parent} = KlassHero.Factory.insert_child_with_guardian()
 
       enrollment =
@@ -1811,7 +1777,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
     test "falls back to a refresh when the confirmed id is not in local assigns",
          %{conn: conn, provider: provider} do
-      program = insert_program_with_listing(provider_id: provider.id)
+      program = insert_program(provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
       assert render(view) =~ "No pending enrollments right now."

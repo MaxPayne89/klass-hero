@@ -271,14 +271,6 @@ defmodule KlassHeroWeb.Provider.DashboardProgramFilterSyncTest do
   defp insert_listed_program(provider, title) do
     program = insert(:program_schema, provider_id: provider.id, title: title)
 
-    insert(:program_listing_schema,
-      id: program.id,
-      provider_id: provider.id,
-      title: program.title,
-      category: program.category,
-      price: program.price
-    )
-
     program
   end
 

@@ -13,8 +13,9 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
   import KlassHeroWeb.ProviderComponents
 
   alias KlassHero.Enrollment
+  alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.ProgramListing
+  alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Provider
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
@@ -43,7 +44,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
     top_programs = build_top_programs(program_listings, enrollment_counts)
 
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "provider:#{provider.id}:stats_updated")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.stats_topic(provider.id))
 
       Phoenix.PubSub.subscribe(
         KlassHero.PubSub,
@@ -165,7 +166,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
   end
 
   # Top 5 provider programs sorted by active-enrollment count desc.
-  # Source is the rich %ProgramListing{} already loaded in mount.
+  # Source is the rich %Program{} already loaded in mount.
   defp build_top_programs(listings, enrollment_counts) do
     today = Date.utc_today()
 
@@ -175,7 +176,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
     |> Enum.take(5)
   end
 
-  defp build_program_row(%ProgramListing{} = p, enrollment_counts, today) do
+  defp build_program_row(%Program{} = p, enrollment_counts, today) do
     %{
       id: p.id,
       title: p.title,
@@ -185,10 +186,10 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
     }
   end
 
-  # %ProgramListing{} carries no explicit status; derive a coarse pill from its
+  # %Program{} carries no explicit status; derive a coarse pill from its
   # registration and run-window dates. :full is capacity-driven and out of scope
   # here — capacity isn't projected onto the listing read model.
-  defp derive_program_status(%ProgramListing{} = p, today) do
+  defp derive_program_status(%Program{} = p, today) do
     cond do
       not_yet_open?(p.registration_start_date, today) -> :draft
       past?(p.registration_end_date, today) -> :archived

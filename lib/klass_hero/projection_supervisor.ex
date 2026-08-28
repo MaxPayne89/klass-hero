@@ -11,11 +11,7 @@ defmodule KlassHero.ProjectionSupervisor do
   use Supervisor
 
   alias KlassHero.Messaging.ConversationSummaries
-  alias KlassHero.Messaging.EnrolledChildren
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
-  alias KlassHero.Provider.Projections.ProviderPrograms
   alias KlassHero.Provider.Projections.ProviderSessionDetails
-  alias KlassHero.Provider.Projections.ProviderSessionStats
 
   def start_link(init_arg) do
     Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
@@ -29,11 +25,7 @@ defmodule KlassHero.ProjectionSupervisor do
   @spec projections() :: [module()]
   def projections do
     [
-      ProgramListings,
-      EnrolledChildren,
       ConversationSummaries,
-      ProviderSessionStats,
-      ProviderPrograms,
       ProviderSessionDetails
     ]
   end

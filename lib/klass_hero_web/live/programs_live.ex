@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.ProgramsLive do
   import KlassHeroWeb.ProgramComponents
 
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.ProgramListing
+  alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Shared.ErrorIds
   alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Presenters.ProgramPresenter
@@ -109,7 +109,7 @@ defmodule KlassHeroWeb.ProgramsLive do
     {:noreply, socket}
   end
 
-  defp program_to_map(%ProgramListing{} = program, capacities, providers) do
+  defp program_to_map(%Program{} = program, capacities, providers) do
     remaining = Map.get(capacities, program.id)
     spots_left = if remaining != :unlimited, do: remaining
 
@@ -237,9 +237,9 @@ defmodule KlassHeroWeb.ProgramsLive do
 
   defp apply_sort(programs, _recommended), do: programs
 
-  defp price_for_sort(%ProgramListing{price: nil}), do: 0
-  defp price_for_sort(%ProgramListing{price: %Decimal{} = d}), do: Decimal.to_float(d)
-  defp price_for_sort(%ProgramListing{price: p}) when is_number(p), do: p
+  defp price_for_sort(%Program{price: nil}), do: 0
+  defp price_for_sort(%Program{price: %Decimal{} = d}), do: Decimal.to_float(d)
+  defp price_for_sort(%Program{price: p}) when is_number(p), do: p
 
   defp build_query_params(assigns, updates) do
     updates_map = Map.new(updates, fn {k, v} -> {to_string(k), v} end)

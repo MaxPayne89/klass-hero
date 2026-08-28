@@ -2,11 +2,11 @@ defmodule KlassHero.Shared.ReadTable do
   @moduledoc """
   Marks an Ecto schema as a **projection read table**.
 
-      defmodule KlassHero.Provider.ProviderProgram do
+      defmodule KlassHero.Provider.SessionDetail do
         use Ecto.Schema
         use KlassHero.Shared.ReadTable
 
-        schema "provider_programs" do
+        schema "provider_session_details" do
           # ...
         end
       end

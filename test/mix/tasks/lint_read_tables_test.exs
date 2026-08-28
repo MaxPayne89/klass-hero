@@ -18,7 +18,7 @@ defmodule Mix.Tasks.LintReadTablesTest do
     test "passes a tree where every schema is an entity or a declared read table", %{tmp_dir: dir} do
       write(dir, "provider/provider_program.ex", schema(marker: true))
       write(dir, "provider/staff_member.ex", schema(changeset: "create_changeset"))
-      write(dir, "provider/adapters/driven/projections/provider_programs.ex", plain_module())
+      write(dir, "provider/adapters/driven/projections/provider_session_details.ex", plain_module())
 
       assert LintReadTables.violations(dir) == []
     end

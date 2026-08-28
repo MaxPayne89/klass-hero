@@ -13,7 +13,6 @@ defmodule KlassHero.Provider.ProgramsTest do
 
   alias KlassHero.Provider
   alias KlassHero.Provider.Programs
-  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
@@ -22,10 +21,7 @@ defmodule KlassHero.Provider.ProgramsTest do
       absent = Ecto.UUID.generate()
 
       cases = [
-        {"get_provider_program/1", fn -> Programs.get_provider_program(absent) end, {:error, :not_found}},
-        {"get_provider_program/2", fn -> Programs.get_provider_program(absent, absent) end, {:error, :not_found}},
         {"get_session_detail/1", fn -> Programs.get_session_detail(absent) end, {:error, :not_found}},
-        {"list_provider_programs/1", fn -> Provider.list_provider_programs(absent) end, []},
         {"list_program_sessions/2", fn -> Provider.list_program_sessions(absent, absent) end, []},
         {"get_total_session_count/1", fn -> Provider.get_total_session_count(absent) end, 0}
       ]
@@ -87,59 +83,24 @@ defmodule KlassHero.Provider.ProgramsTest do
     end
   end
 
-  describe "get_provider_program/1" do
-    test "returns {:ok, struct} for a known program_id, unscoped" do
-      row = insert_program(%{name: "Robotics"})
-
-      assert {:ok, %ProviderProgram{program_id: id, name: "Robotics"}} =
-               Programs.get_provider_program(row.program_id)
-
-      assert id == row.program_id
-    end
-  end
-
-  describe "get_provider_program/2" do
-    test "returns the program when the provider owns it" do
-      provider_id = Ecto.UUID.generate()
-      row = insert_program(%{provider_id: provider_id, name: "Chess"})
-
-      assert {:ok, %ProviderProgram{name: "Chess"}} =
-               Programs.get_provider_program(row.program_id, provider_id)
-    end
-
-    # Foreign ≡ missing: the provider_id predicate is part of the query, so a
-    # foreign row is never loaded and the caller gains no existence oracle.
-    test "returns :not_found for a program owned by someone else" do
-      row = insert_program(%{provider_id: Ecto.UUID.generate()})
-
-      assert {:error, :not_found} =
-               Programs.get_provider_program(row.program_id, Ecto.UUID.generate())
-    end
-  end
-
-  describe "list_provider_programs/1" do
-    test "returns only rows for the given provider, ordered by name asc" do
-      provider_id = Ecto.UUID.generate()
-      insert_program(%{provider_id: provider_id, name: "Chess"})
-      insert_program(%{provider_id: provider_id, name: "Art"})
-      insert_program(%{provider_id: Ecto.UUID.generate(), name: "Stranger"})
-
-      rows = Provider.list_provider_programs(provider_id)
-
-      assert Enum.map(rows, & &1.name) == ["Art", "Chess"]
-      assert Enum.all?(rows, &(&1.provider_id == provider_id))
-    end
-  end
-
   describe "get_total_session_count/1" do
-    test "returns the sum of completed-session counts across the provider's programs" do
-      provider_id = Ecto.UUID.generate()
+    # Counting rules (statuses, cross-provider isolation) are pinned in
+    # ParticipationSessionStatsACLTest; this asserts the facade reaches them.
+    test "returns the count of completed sessions across the provider's programs" do
+      provider = insert(:provider_profile_schema)
+      art = insert(:program_schema, provider_id: provider.id, title: "Art")
+      chess = insert(:program_schema, provider_id: provider.id, title: "Chess")
 
-      insert(:session_stats, provider_id: provider_id, sessions_completed_count: 3)
-      insert(:session_stats, provider_id: provider_id, sessions_completed_count: 7)
-      insert(:session_stats, sessions_completed_count: 10)
+      for {program, status, date} <- [
+            {art, "completed", ~D[2026-05-01]},
+            {art, "completed", ~D[2026-05-02]},
+            {chess, "completed", ~D[2026-05-03]},
+            {chess, "scheduled", ~D[2026-05-04]}
+          ] do
+        insert(:program_session_schema, program_id: program.id, status: status, session_date: date)
+      end
 
-      assert 10 == Provider.get_total_session_count(provider_id)
+      assert 3 == Provider.get_total_session_count(provider.id)
     end
   end
 
@@ -156,19 +117,5 @@ defmodule KlassHero.Provider.ProgramsTest do
     %SessionDetail{}
     |> Ecto.Changeset.change(Map.merge(defaults, attrs))
     |> Repo.insert!()
-  end
-
-  defp insert_program(attrs) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    defaults = %{
-      program_id: Ecto.UUID.generate(),
-      provider_id: Ecto.UUID.generate(),
-      name: "Drawing Club",
-      inserted_at: now,
-      updated_at: now
-    }
-
-    Repo.insert!(struct(ProviderProgram, Map.merge(defaults, attrs)))
   end
 end

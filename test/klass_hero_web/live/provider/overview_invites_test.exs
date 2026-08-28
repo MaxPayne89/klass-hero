@@ -14,39 +14,11 @@ defmodule KlassHeroWeb.Provider.OverviewInvitesTest do
 
   alias KlassHero.Enrollment
   alias KlassHero.Enrollment.BulkEnrollmentInvite
-  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
 
   setup :register_and_log_in_provider
 
-  # Overview reads programs from the program_listings read table and derives its
-  # KPI counts from them — a write-side program alone leaves the tab half-empty.
-  defp insert_program_with_listing(attrs) do
-    program = KlassHero.Factory.insert(:program_schema, attrs)
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    %ProgramListing{}
-    |> Ecto.Changeset.change(%{
-      id: program.id,
-      title: program.title,
-      description: program.description,
-      category: program.category,
-      age_range: program.age_range,
-      price: program.price,
-      pricing_period: program.pricing_period,
-      location: program.location,
-      start_date: program.start_date,
-      end_date: program.end_date,
-      meeting_days: program.meeting_days || [],
-      season: program.season,
-      provider_id: program.provider_id,
-      inserted_at: program.inserted_at || now,
-      updated_at: program.updated_at || now
-    })
-    |> Repo.insert!()
-
-    program
-  end
+  defp insert_program(attrs), do: KlassHero.Factory.insert(:program_schema, attrs)
 
   defp invite(program, provider, attrs \\ %{}) do
     {status, attrs} = Map.pop(attrs, :status)
@@ -79,7 +51,7 @@ defmodule KlassHeroWeb.Provider.OverviewInvitesTest do
   end
 
   setup %{provider: provider} do
-    %{program: insert_program_with_listing(provider_id: provider.id, title: "Chess Club")}
+    %{program: insert_program(provider_id: provider.id, title: "Chess Club")}
   end
 
   describe "the card" do
@@ -130,7 +102,7 @@ defmodule KlassHeroWeb.Provider.OverviewInvitesTest do
       program: program,
       provider: provider
     } do
-      other = insert_program_with_listing(provider_id: provider.id, title: "Art Club")
+      other = insert_program(provider_id: provider.id, title: "Art Club")
       invite(program, provider)
       invite(other, provider, %{guardian_email: "second@test.com"})
 

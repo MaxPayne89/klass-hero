@@ -35,13 +35,7 @@ defmodule KlassHero.Provider.NotifyIncidentReportedWorkerTest do
           business_owner_email: "profile-owner@example.com"
         )
 
-      program = insert(:program_schema, provider_id: provider.id)
-
-      provider_program_projection_fixture(
-        provider_id: provider.id,
-        program_id: program.id,
-        name: "Worker Program"
-      )
+      program = insert(:program_schema, provider_id: provider.id, title: "Worker Program")
 
       report =
         incident_report_fixture(%{

@@ -17,7 +17,6 @@ alias KlassHero.Family.FamilyEventHandler
 alias KlassHero.Family.InviteClaimedHandler
 alias KlassHero.Family.ProcessInviteClaimWorker
 alias KlassHero.Messaging.ConversationSummaries
-alias KlassHero.Messaging.EnrolledChildren
 alias KlassHero.Messaging.EnrollmentParticipationHandler
 alias KlassHero.Messaging.MessagingEventHandler
 alias KlassHero.Messaging.NewMessageEmailHandler
@@ -28,11 +27,8 @@ alias KlassHero.Messaging.Workers.RetentionPolicyWorker
 alias KlassHero.Messaging.Workers.SendEmailReplyWorker
 alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
 alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
-alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
-alias KlassHero.Provider.Projections.ProviderPrograms
 alias KlassHero.Provider.Projections.ProviderSessionDetails
-alias KlassHero.Provider.Projections.ProviderSessionStats
 alias KlassHero.Provider.ProviderEventHandler
 alias KlassHero.Provider.StaffInvitationStatusHandler
 alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
@@ -247,32 +243,28 @@ config :klass_hero, :event_consumers, %{
     {InviteFamilyReadyHandler, :handle_event}
   ],
   "integration:family:child_created" => [
-    {EnrolledChildren, :project}
+    {ConversationSummaries, :project}
   ],
   "integration:family:child_updated" => [
-    {EnrolledChildren, :project}
+    {ConversationSummaries, :project}
   ],
 
   # Program Catalog
   "integration:program_catalog:program_created" => [
-    {ParticipationEventHandler, :handle_event},
-    {ProgramListings, :project},
-    {ProviderPrograms, :project}
+    {ParticipationEventHandler, :handle_event}
   ],
   "integration:program_catalog:program_updated" => [
-    {ParticipationEventHandler, :handle_event},
-    {ProgramListings, :project},
-    {ProviderPrograms, :project}
+    {ParticipationEventHandler, :handle_event}
   ],
 
   # Enrollment
   "integration:enrollment:enrollment_created" => [
     {ParticipationEventHandler, :handle_event},
-    {EnrolledChildren, :project},
+    {ConversationSummaries, :project},
     {EnrollmentParticipationHandler, :handle_event}
   ],
   "integration:enrollment:enrollment_cancelled" => [
-    {EnrolledChildren, :project}
+    {ConversationSummaries, :project}
   ],
   "integration:enrollment:participant_policy_set" => [
     {EnrollmentEventHandler, :handle_event}
@@ -337,8 +329,7 @@ config :klass_hero, :event_consumers, %{
     {ProviderSessionDetails, :project}
   ],
   "integration:participation:session_completed" => [
-    {ProviderSessionDetails, :project},
-    {ProviderSessionStats, :project}
+    {ProviderSessionDetails, :project}
   ],
   "integration:participation:session_cancelled" => [
     {ProviderSessionDetails, :project}
@@ -361,8 +352,7 @@ config :klass_hero, :event_consumers, %{
 
   # Messaging
   "integration:messaging:conversation_created" => [
-    {ConversationSummaries, :project},
-    {EnrolledChildren, :project}
+    {ConversationSummaries, :project}
   ],
   # Order is not load-bearing here: NewMessageEmailHandler deliberately reads
   # conversation_participants rather than the unread_count ConversationSummaries

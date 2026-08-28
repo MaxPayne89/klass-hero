@@ -6,7 +6,6 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
   import KlassHero.AccountsFixtures, only: [unconfirmed_user_fixture: 1]
   import KlassHero.EmailTestHelper
   import KlassHero.Factory
-  import KlassHero.ProviderFixtures, only: [provider_program_projection_fixture: 1]
   import Swoosh.TestAssertions
 
   alias KlassHero.Accounts.User
@@ -19,14 +18,8 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
 
   setup do
     provider = insert(:provider_profile_schema)
-    program = insert(:program_schema, provider_id: provider.id)
+    program = insert(:program_schema, provider_id: provider.id, title: "Art Club")
     user = unconfirmed_user_fixture(%{})
-
-    provider_program_projection_fixture(
-      provider_id: provider.id,
-      program_id: program.id,
-      name: "Art Club"
-    )
 
     %{provider: provider, program_id: program.id, user: user}
   end

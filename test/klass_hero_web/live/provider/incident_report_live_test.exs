@@ -5,32 +5,19 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Provider.IncidentReport
-  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Repo
 
   defp insert_provider_program!(attrs) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    program = insert(:program_schema, provider_id: attrs[:provider_id], title: attrs[:name] || "Some Program")
 
-    defaults = %{
-      program_id: Ecto.UUID.generate(),
-      provider_id: attrs[:provider_id],
-      name: "Some Program",
-      inserted_at: now,
-      updated_at: now
-    }
+    # The program picker still lists from the `program_listings` projection.
+    # Drops out with that projection.
 
-    Repo.insert!(struct(ProviderProgram, Map.merge(defaults, attrs)))
+    program
   end
 
-  # Trigger: a submit test needs both the projection (for ownership check) and
-  #          the underlying programs row (for the incident_reports.program_id FK)
-  # Why: SubmitIncidentReport queries the projection but persists into incident_reports
-  #      which references programs(:id) — both must exist with matching ids
-  # Outcome: returns the program_id that ties projection + programs row together
   defp insert_owned_program!(provider_id, name) do
-    row = insert_provider_program!(%{provider_id: provider_id, name: name})
-    insert(:program_schema, id: row.program_id, provider_id: provider_id)
-    row.program_id
+    insert_provider_program!(%{provider_id: provider_id, name: name}).id
   end
 
   describe "mount" do
@@ -50,11 +37,11 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
     test "preselects a program when ?program_id= is valid", %{conn: conn, provider: provider} do
       row = insert_provider_program!(%{provider_id: provider.id, name: "Robotics"})
 
-      {:ok, view, _html} = live(conn, ~p"/provider/incidents/new?program_id=#{row.program_id}")
+      {:ok, view, _html} = live(conn, ~p"/provider/incidents/new?program_id=#{row.id}")
 
       assert has_element?(
                view,
-               ~s|#incident-report-form[data-selected-program="#{row.program_id}"]|
+               ~s|#incident-report-form[data-selected-program="#{row.id}"]|
              )
     end
 

@@ -72,6 +72,8 @@ defmodule KlassHero.Participation.Notifications do
       nil -> :ok
       message -> Enum.each(topics(event), &broadcast(&1, message))
     end
+
+    notify_stats(event)
   end
 
   @doc """
@@ -85,6 +87,16 @@ defmodule KlassHero.Participation.Notifications do
   @doc "The child-scoped participation topic, subscribed to per child by parent LiveViews (#1121)."
   @spec child_topic(String.t()) :: String.t()
   def child_topic(child_id), do: "participation:child:#{child_id}"
+
+  @doc """
+  The provider stats topic, carrying `:session_stats_updated` to the overview.
+
+  Kept separate from `provider_topic/1` on purpose: the overview recounts on this
+  message, and the provider topic carries attendance and note traffic that does not
+  change the count.
+  """
+  @spec stats_topic(String.t()) :: String.t()
+  def stats_topic(provider_id), do: "provider:#{provider_id}:stats_updated"
 
   # Matching the id out of the payload rather than fetching it: an event missing
   # the id its message is built from falls through to the catch-all and notifies
@@ -108,6 +120,21 @@ defmodule KlassHero.Participation.Notifications do
   defp message(%Event{event_type: type}) when type in @note_events, do: :session_notes_changed
 
   defp message(%Event{}), do: nil
+
+  # The overview's completed-session counter is computed live from `program_sessions`,
+  # so something has to tell a mounted overview to recount. That announcement used to
+  # come from the `provider_session_stats` projection, which broadcast the write it had
+  # just denormalised. With the counter read live the projection is gone, and the rule
+  # it was bending applies: a UI update is a plain tagged tuple broadcast by whoever
+  # wrote the data.
+  defp notify_stats(%Event{event_type: :session_completed, payload: %{program_id: program_id}}) do
+    case ProgramProviderResolver.resolve_provider_id(program_id) do
+      {:ok, provider_id} -> broadcast(stats_topic(provider_id), :session_stats_updated)
+      {:error, _reason} -> :ok
+    end
+  end
+
+  defp notify_stats(%Event{}), do: :ok
 
   defp topics(%Event{payload: payload} = event) do
     provider_topics(event) ++ child_topics(payload)
