@@ -1,15 +1,18 @@
 defmodule KlassHeroWeb.Flows.ProviderPublishesProgramTest do
   @moduledoc """
   Flow test for a provider publishing a program: the provider dashboard's program
-  form -> `program_created` delivered for real -> the card on the public `/programs`.
+  form -> the row committed -> the card on the public `/programs`.
 
-  This is the one flow that crosses the CQRS boundary end to end. Today the two
-  halves are tested apart and neither can see the seam: `programs_live_test.exs`
-  seeds the catalog read path directly, so the publish path never runs, and
-  `program_listing_delivery_test.exs` runs the projection but never renders the
-  page. A field the producer stops sending is invisible to both — which is how
-  `program_created` came to omit description and price (see the fix in
-  `KlassHero.ProgramCatalog.listing_payload/1`).
+  Both halves are otherwise tested apart, and neither sees the seam:
+  `programs_live_test.exs` seeds programs directly, so the publish path never runs,
+  and the form tests never render the catalog. This is the one test that walks a
+  provider's save through to what an anonymous visitor sees.
+
+  It used to cross a CQRS boundary — the catalog read a `program_listings`
+  projection — and caught the class of bug where a producer stops sending a field
+  (`program_created` once omitted description and price). ADR-0023 removed that
+  projection; the journey is unchanged and still green, which is what said the
+  removal preserved behaviour.
 
   `ProfileCompletionLive` is deliberately not on this path: it serves the
   staff-to-provider draft upgrade (ADR-0005). A provider who registers directly
