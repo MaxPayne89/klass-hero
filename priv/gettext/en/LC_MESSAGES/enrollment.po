@@ -11,95 +11,95 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/klass_hero_web/components/provider_components.ex:3264
 #: lib/klass_hero_web/components/provider_components.ex:3281
+#: lib/klass_hero_web/components/provider_components.ex:3298
 #, elixir-autogen, elixir-format
 msgid "Child first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3265
 #: lib/klass_hero_web/components/provider_components.ex:3282
+#: lib/klass_hero_web/components/provider_components.ex:3299
 #, elixir-autogen, elixir-format
 msgid "Child last name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3266
 #: lib/klass_hero_web/components/provider_components.ex:3283
+#: lib/klass_hero_web/components/provider_components.ex:3300
 #, elixir-autogen, elixir-format
 msgid "Date of birth"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3277
+#: lib/klass_hero_web/components/provider_components.ex:3294
 #, elixir-autogen, elixir-format
 msgid "Grade"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3267
+#: lib/klass_hero_web/components/provider_components.ex:3284
 #, elixir-autogen, elixir-format
 msgid "Guardian email"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3268
+#: lib/klass_hero_web/components/provider_components.ex:3285
 #, elixir-autogen, elixir-format
 msgid "Guardian first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3269
+#: lib/klass_hero_web/components/provider_components.ex:3286
 #, elixir-autogen, elixir-format
 msgid "Guardian last name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3276
+#: lib/klass_hero_web/components/provider_components.ex:3293
 #, elixir-autogen, elixir-format
 msgid "Program"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3278
+#: lib/klass_hero_web/components/provider_components.ex:3295
 #, elixir-autogen, elixir-format
 msgid "School"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3270
+#: lib/klass_hero_web/components/provider_components.ex:3287
 #, elixir-autogen, elixir-format
 msgid "Second guardian email"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3272
+#: lib/klass_hero_web/components/provider_components.ex:3289
 #, elixir-autogen, elixir-format
 msgid "Second guardian first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3274
+#: lib/klass_hero_web/components/provider_components.ex:3291
 #, elixir-autogen, elixir-format
 msgid "Second guardian last name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3204
+#: lib/klass_hero_web/components/provider_components.ex:3221
 #, elixir-autogen, elixir-format
 msgid "Date of birth \"%{value}\" is not a valid date. Please correct it and resend."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3198
+#: lib/klass_hero_web/components/provider_components.ex:3215
 #, elixir-autogen, elixir-format
 msgid "Invite link could not be generated (no token). Please resend."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3212
+#: lib/klass_hero_web/components/provider_components.ex:3229
 #, elixir-autogen, elixir-format
 msgid "The invitation email could not be delivered. Please check the address and resend."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3201
+#: lib/klass_hero_web/components/provider_components.ex:3218
 #, elixir-autogen, elixir-format
 msgid "The program is full, so this child could not be enrolled."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3215
+#: lib/klass_hero_web/components/provider_components.ex:3232
 #, elixir-autogen, elixir-format
 msgid "This invite could not be completed and no retries remain. Please resend."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3224
+#: lib/klass_hero_web/components/provider_components.ex:3241
 #, elixir-autogen, elixir-format
 msgid "This invite could not be completed. Please resend."
 msgstr ""

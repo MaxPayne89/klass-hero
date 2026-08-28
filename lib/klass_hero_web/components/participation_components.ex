@@ -113,7 +113,9 @@ defmodule KlassHeroWeb.ParticipationComponents do
                 )}
               <% end %>
             </span>
-            <.occupancy_mark state={ProgramSession.occupancy(@session, @attendance.roster)} />
+            <%!-- A cancelled session ran for nobody, so its overflow is not a fact worth
+                  flagging. A completed one still is: that roster genuinely attended. --%>
+            <.occupancy_mark state={occupancy_state(@session, @attendance)} />
           </div>
         <% end %>
       </div>
@@ -171,6 +173,9 @@ defmodule KlassHeroWeb.ParticipationComponents do
     </span>
     """
   end
+
+  defp occupancy_state(%{status: :cancelled}, _attendance), do: :uncapped
+  defp occupancy_state(session, attendance), do: ProgramSession.occupancy(session, attendance.roster)
 
   @doc """
   Marks a Session whose Roster has outgrown its Session Capacity.

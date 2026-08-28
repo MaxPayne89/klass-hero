@@ -76,6 +76,61 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
     # subtitle is missing there, an unrelated edit submits a blank one and
     # silently wipes it — invisible to any test that only asserts the field it
     # meant to change.
+    test "creates a program with a default Session Capacity", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view |> element("#new-program-btn") |> render_click()
+
+      view
+      |> form("#program-form", %{
+        "program_schema" => %{
+          "title" => "Pottery Club",
+          "description" => "Throwing and glazing",
+          "category" => "arts",
+          "price" => "60.00",
+          "default_session_capacity" => "12"
+        }
+      })
+      |> render_submit()
+
+      assert Repo.get_by(Program, title: "Pottery Club").default_session_capacity == 12
+    end
+
+    test "an edit that does not touch the default Session Capacity preserves it", %{
+      conn: conn,
+      provider: provider
+    } do
+      # Same trap as the subtitle below: if the field is missing from
+      # `program_to_form_params/1`, an unrelated edit submits a blank one and
+      # silently clears every generated session's capacity on the next sync.
+      program =
+        insert(:program_schema,
+          provider_id: provider.id,
+          title: "Pottery Club",
+          default_session_capacity: 12
+        )
+
+      insert(:program_listing_schema,
+        id: program.id,
+        provider_id: provider.id,
+        title: program.title
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view
+      |> element(~s([phx-click="edit_program"][phx-value-id="#{program.id}"]))
+      |> render_click()
+
+      view
+      |> form("#program-form", %{"program_schema" => %{"title" => "Pottery Club Advanced"}})
+      |> render_submit()
+
+      reloaded = Repo.get!(Program, program.id)
+      assert reloaded.title == "Pottery Club Advanced"
+      assert reloaded.default_session_capacity == 12
+    end
+
     test "an edit that does not touch the subtitle preserves it", %{
       conn: conn,
       provider: provider

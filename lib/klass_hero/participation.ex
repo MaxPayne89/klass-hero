@@ -130,6 +130,7 @@ defmodule KlassHero.Participation do
           Outbox.transact_with_events(@context, fn ->
             revived = revive_generated_sessions(program, upcoming)
             inserted = insert_generated_sessions(program, upcoming)
+            align_generated_capacity(program, upcoming)
             cancelled = cancel_orphaned_sessions(program, upcoming, today)
 
             events =
@@ -257,12 +258,28 @@ defmodule KlassHero.Participation do
     Outbox.transact_with_events(@context, fn ->
       session
       |> ProgramSession.update_changeset(attrs)
+      |> mark_capacity_explicit(attrs)
       |> Repo.update()
       |> case do
         {:ok, persisted} -> {:ok, persisted, [ParticipationEvents.session_updated(persisted)]}
         {:error, changeset} -> {:error, update_refusal(changeset)}
       end
     end)
+  end
+
+  # A caller who names a capacity has decided this one date's number, so the
+  # generation sweep must stop maintaining it. Set here rather than cast, so the
+  # marker records what the write meant and cannot be forged from form params.
+  #
+  # Keyed on the attrs the caller supplied, not on whether the value changed:
+  # re-submitting the same number the program happens to dictate is still a
+  # provider claiming that date, and must survive a later change to the default.
+  defp mark_capacity_explicit(changeset, attrs) do
+    if Map.has_key?(attrs, :max_capacity) or Map.has_key?(attrs, "max_capacity") do
+      Ecto.Changeset.put_change(changeset, :capacity_source, :explicit)
+    else
+      changeset
+    end
   end
 
   defp update_refusal(%Ecto.Changeset{errors: errors}) do
@@ -1530,6 +1547,55 @@ defmodule KlassHero.Participation do
     count
   end
 
+  # Capacity is realigned, not merely seeded at insert. `insert_generated_sessions/2`
+  # uses `on_conflict: :nothing`, so a value copied at creation is frozen — a provider
+  # raising their capacity would see every existing date keep the old number, which is
+  # how `location` behaves today and is a latent bug there.
+  #
+  # What it must not touch is a capacity a human chose. A provider can open one
+  # generated date and give it its own number (`ParticipationLive` ->
+  # `update_session/3`), which stamps `capacity_source: :explicit`; only `:inherited`
+  # rows are swept. `origin` cannot carry this distinction — it says where the
+  # *session* came from, and both kinds of capacity sit on `origin: :generated` rows.
+  #
+  # Scoped through `generated_slot_query/1` so "still a valid slot" means the same
+  # here as in `cancel_orphaned_sessions/3`: a row left at a superseded start time is
+  # about to be cancelled, and realigning it first would be a write to a dead row.
+  # A session already started, finished or cancelled keeps whatever it ran with.
+  #
+  # Stages no event: no read table carries `max_capacity`, so there is no projection
+  # for this write to drift from.
+  defp align_generated_capacity(_program, []), do: :ok
+
+  defp align_generated_capacity(%{default_session_capacity: nil} = program, dates) do
+    program
+    |> realignable_sessions(dates)
+    |> where([s], not is_nil(s.max_capacity))
+    |> Repo.update_all(set: [max_capacity: nil, updated_at: now_utc()])
+
+    :ok
+  end
+
+  defp align_generated_capacity(%{default_session_capacity: capacity} = program, dates) do
+    program
+    |> realignable_sessions(dates)
+    |> where([s], is_nil(s.max_capacity) or s.max_capacity != ^capacity)
+    |> Repo.update_all(set: [max_capacity: capacity, updated_at: now_utc()])
+
+    :ok
+  end
+
+  # Split on the nil default rather than comparing in one expression: Ecto refuses
+  # `s.max_capacity != ^nil`, because in SQL that is NULL rather than true and would
+  # silently match nothing.
+  defp realignable_sessions(program, dates) do
+    program
+    |> generated_slot_query()
+    |> where([s], s.status == :scheduled)
+    |> where([s], s.session_date in ^dates)
+    |> where([s], s.capacity_source == :inherited)
+  end
+
   defp insert_generated_sessions(_program, []), do: []
 
   defp insert_generated_sessions(program, dates) do
@@ -1546,6 +1612,8 @@ defmodule KlassHero.Participation do
           status: :scheduled,
           origin: :generated,
           location: program.location,
+          max_capacity: program.default_session_capacity,
+          capacity_source: :inherited,
           lock_version: 1,
           inserted_at: now,
           updated_at: now

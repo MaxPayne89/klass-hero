@@ -732,7 +732,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         start_date: parse_date(params["start_date"]),
         end_date: parse_date(params["end_date"]),
         registration_start_date: parse_date(params["registration_start_date"]),
-        registration_end_date: parse_date(params["registration_end_date"])
+        registration_end_date: parse_date(params["registration_end_date"]),
+        default_session_capacity: parse_integer(params["default_session_capacity"])
       }
       |> maybe_add_cover_image(cover_result)
 
@@ -1438,7 +1439,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       "start_date" => nil_safe(program.start_date, &Date.to_iso8601/1),
       "end_date" => nil_safe(program.end_date, &Date.to_iso8601/1),
       "registration_start_date" => nil_safe(program.registration_period.start_date, &Date.to_iso8601/1),
-      "registration_end_date" => nil_safe(program.registration_period.end_date, &Date.to_iso8601/1)
+      "registration_end_date" => nil_safe(program.registration_period.end_date, &Date.to_iso8601/1),
+      "default_session_capacity" => nil_safe(program.default_session_capacity, &to_string/1)
     }
   end
 
