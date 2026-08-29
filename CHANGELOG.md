@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.97.2](https://github.com/MaxPayne89/klass-hero/compare/v0.97.1...v0.97.2) (2026-08-29)
+
+
+### Code Refactoring
+
+* retire the conversation_summaries projection ([#1571](https://github.com/MaxPayne89/klass-hero/issues/1571)) ([50ec020](https://github.com/MaxPayne89/klass-hero/commit/50ec020d1525a1a6e21234303f4e5ddad75d94f2))
+
 ## [0.97.1](https://github.com/MaxPayne89/klass-hero/compare/v0.97.0...v0.97.1) (2026-08-28)
 
 
