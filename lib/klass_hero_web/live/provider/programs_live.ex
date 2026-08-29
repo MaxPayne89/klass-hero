@@ -1029,7 +1029,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     assignable =
       provider_id
       |> Provider.list_assignable_staff_for_program(program_id)
-      |> staff_to_options()
+      |> ProgramStaffingPresenter.assignable_options()
 
     %{
       program_id: program_id,
@@ -1221,11 +1221,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   defp build_instructor_options(provider_id) do
     {:ok, members} = Provider.list_active_staff_members(provider_id)
-    staff_to_options(members)
-  end
-
-  defp staff_to_options(members) do
-    Enum.map(members, fn m -> {Provider.staff_member_full_name(m), m.id} end)
+    ProgramStaffingPresenter.assignable_options(members)
   end
 
   # Skip the upsert on create when both limits are empty — avoid storing an all-nil row

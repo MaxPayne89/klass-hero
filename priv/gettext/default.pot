@@ -633,6 +633,7 @@ msgstr ""
 msgid "Failed to delete account. Please try again."
 msgstr ""
 
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:238
 #: lib/klass_hero_web/live/provider/sessions_live.ex:139
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:91
 #, elixir-autogen, elixir-format
@@ -685,7 +686,7 @@ msgid "Introduction"
 msgstr ""
 
 #: lib/klass_hero_web/helpers/session_form_handlers.ex:173
-#: lib/klass_hero_web/live/provider/sessions_live.ex:114
+#: lib/klass_hero_web/live/provider/sessions_live.ex:111
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "Invalid date format"
@@ -759,7 +760,7 @@ msgstr ""
 msgid "Message sent successfully!"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:50
+#: lib/klass_hero_web/live/provider/sessions_live.ex:48
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:6
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:21
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:231
@@ -853,8 +854,8 @@ msgstr ""
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:107
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:139
 #: lib/klass_hero_web/live/admin/sessions_live.ex:247
-#: lib/klass_hero_web/live/provider/participation_live.ex:249
-#: lib/klass_hero_web/live/provider/participation_live.ex:295
+#: lib/klass_hero_web/live/provider/participation_live.ex:386
+#: lib/klass_hero_web/live/provider/participation_live.ex:432
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:139
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:185
 #, elixir-autogen, elixir-format
@@ -902,12 +903,13 @@ msgstr ""
 
 #: lib/klass_hero_web/live/admin/sessions_live.ex:62
 #: lib/klass_hero_web/live/admin/sessions_live.ex:68
-#: lib/klass_hero_web/live/provider/participation_live.ex:365
+#: lib/klass_hero_web/live/provider/participation_live.ex:502
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:270
 #, elixir-autogen, elixir-format
 msgid "Session not found"
 msgstr ""
 
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:226
 #: lib/klass_hero_web/live/provider/sessions_live.ex:122
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:74
 #, elixir-autogen, elixir-format
@@ -1136,7 +1138,7 @@ msgstr ""
 msgid "Failed to load participation history"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:30
+#: lib/klass_hero_web/live/provider/participation_live.ex:33
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:55
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:27
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:279
@@ -1381,8 +1383,8 @@ msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:586
 #: lib/klass_hero_web/components/provider_components.ex:1592
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:88
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:115
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:108
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:135
 #: lib/klass_hero_web/live/settings/children_live.ex:413
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:65
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:92
@@ -1655,7 +1657,7 @@ msgstr ""
 msgid "Failed to reject note"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:241
+#: lib/klass_hero_web/live/provider/participation_live.ex:378
 #, elixir-autogen, elixir-format
 msgid "Failed to resubmit note"
 msgstr ""
@@ -1751,7 +1753,7 @@ msgid "Note approved"
 msgstr ""
 
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:157
-#: lib/klass_hero_web/live/provider/participation_live.ex:233
+#: lib/klass_hero_web/live/provider/participation_live.ex:370
 #, elixir-autogen, elixir-format
 msgid "Note content cannot be blank"
 msgstr ""
@@ -1761,7 +1763,7 @@ msgstr ""
 msgid "Note rejected"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:227
+#: lib/klass_hero_web/live/provider/participation_live.ex:364
 #, elixir-autogen, elixir-format
 msgid "Note resubmitted for review"
 msgstr ""
@@ -1867,7 +1869,7 @@ msgstr ""
 msgid "Type a message..."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:385
+#: lib/klass_hero_web/live/provider/participation_live.ex:522
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:290
 #, elixir-autogen, elixir-format
 msgid "Unable to refresh roster. Please reload."
@@ -2608,12 +2610,12 @@ msgstr ""
 msgid "Program Start"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1400
+#: lib/klass_hero_web/live/provider/programs_live.ex:1396
 #, elixir-autogen, elixir-format
 msgid "Program created successfully."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1404
+#: lib/klass_hero_web/live/provider/programs_live.ex:1400
 #, elixir-autogen, elixir-format
 msgid "Program created, but enrollment capacity could not be saved. Edit the program to retry."
 msgstr ""
@@ -2629,7 +2631,7 @@ msgstr ""
 msgid "Program not found."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1401
+#: lib/klass_hero_web/live/provider/programs_live.ex:1397
 #, elixir-autogen, elixir-format
 msgid "Program updated successfully."
 msgstr ""
@@ -3696,7 +3698,7 @@ msgstr ""
 msgid "Account created! Check your email to confirm and log in."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:183
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:203
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:160
 #, elixir-autogen, elixir-format
 msgid "Add Note"
@@ -3758,7 +3760,7 @@ msgstr ""
 msgid "Broadcast messages are one-way"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:151
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:171
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:128
 #, elixir-autogen, elixir-format
 msgid "Check In"
@@ -3804,7 +3806,7 @@ msgstr ""
 msgid "Complete Registration"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:33
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:41
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:66
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:33
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:290
@@ -3849,7 +3851,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:1944
 #: lib/klass_hero_web/components/provider_components.ex:2005
-#: lib/klass_hero_web/live/provider/sessions_live.html.heex:144
+#: lib/klass_hero_web/live/provider/sessions_live.html.heex:125
 #, elixir-autogen, elixir-format
 msgid "Create Session"
 msgstr ""
@@ -3869,7 +3871,7 @@ msgstr ""
 msgid "E.g., picked up by parent, gave medication reminder..."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:212
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:232
 #, elixir-autogen, elixir-format
 msgid "Edit & Resubmit"
 msgstr ""
@@ -4071,7 +4073,7 @@ msgstr ""
 msgid "No sessions found for the selected filters."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.html.heex:112
+#: lib/klass_hero_web/live/provider/sessions_live.html.heex:95
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:319
 #, elixir-autogen, elixir-format
 msgid "No sessions scheduled"
@@ -4092,7 +4094,7 @@ msgstr ""
 msgid "Out: %{time}"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:64
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:84
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:41
 #, elixir-autogen, elixir-format
 msgid "Participation Management"
@@ -4120,7 +4122,6 @@ msgstr ""
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:136
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:300
 #: lib/klass_hero_web/live/provider/programs_live.ex:227
-#: lib/klass_hero_web/live/provider/sessions_live.ex:384
 #, elixir-autogen, elixir-format
 msgid "Program"
 msgstr ""
@@ -4215,9 +4216,6 @@ msgid "Sending"
 msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:71
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:16
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:55
-#: lib/klass_hero_web/live/provider/sessions_live.ex:411
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:16
 #, elixir-autogen, elixir-format
 msgid "Session"
@@ -4229,7 +4227,7 @@ msgid "Session Roster"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/programs_live.ex:286
-#: lib/klass_hero_web/live/provider/sessions_live.ex:462
+#: lib/klass_hero_web/live/provider/sessions_live.ex:264
 #, elixir-autogen, elixir-format
 msgid "Session created successfully"
 msgstr ""
@@ -4239,6 +4237,7 @@ msgstr ""
 msgid "Staff Dashboard"
 msgstr ""
 
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:33
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:44
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:268
 #, elixir-autogen, elixir-format
@@ -4290,7 +4289,7 @@ msgstr ""
 msgid "Type your reply..."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:227
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:263
 #: lib/klass_hero_web/helpers/session_form_handlers.ex:178
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:126
 #, elixir-autogen, elixir-format
@@ -4339,7 +4338,7 @@ msgstr ""
 msgid "You already have an account. Log in to see your new enrollment."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.html.heex:115
+#: lib/klass_hero_web/live/provider/sessions_live.html.heex:98
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:322
 #, elixir-autogen, elixir-format
 msgid "You have no sessions scheduled for %{date}"
@@ -4383,7 +4382,7 @@ msgstr ""
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:52
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:86
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:120
-#: lib/klass_hero_web/live/provider/participation_live.ex:354
+#: lib/klass_hero_web/live/provider/participation_live.ex:491
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:53
 #, elixir-autogen, elixir-format
 msgid "You are not assigned to this program"
@@ -4608,13 +4607,13 @@ msgstr ""
 msgid "Departure notes"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:298
+#: lib/klass_hero_web/live/provider/participation_live.ex:435
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:188
 #, elixir-autogen, elixir-format
 msgid "Departure time is not a valid date and time"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:309
+#: lib/klass_hero_web/live/provider/participation_live.ex:446
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "Failed to update record"
@@ -4655,7 +4654,7 @@ msgstr ""
 msgid "Medical conditions"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:301
+#: lib/klass_hero_web/live/provider/participation_live.ex:438
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "Nothing to update"
@@ -4686,7 +4685,7 @@ msgstr ""
 msgid "Primary guardian"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:100
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:120
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:77
 #, elixir-autogen, elixir-format
 msgid "Record departure"
@@ -4697,7 +4696,7 @@ msgstr ""
 msgid "Record departure time (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:289
+#: lib/klass_hero_web/live/provider/participation_live.ex:426
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:179
 #, elixir-autogen, elixir-format
 msgid "Record updated"
@@ -5680,7 +5679,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:541
 #: lib/klass_hero_web/components/provider_layout_components.ex:578
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:164
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:184
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:141
 #, elixir-autogen, elixir-format
 msgid "Mark absent"
@@ -7244,8 +7243,8 @@ msgstr ""
 msgid "Nobody is on this program yet."
 msgstr ""
 
+#: lib/klass_hero_web/live/provider/participation_live.ex:106
 #: lib/klass_hero_web/live/provider/programs_live.ex:422
-#: lib/klass_hero_web/live/provider/sessions_live.ex:217
 #, elixir-autogen, elixir-format
 msgid "Pick a staff member to add."
 msgstr ""
@@ -7359,17 +7358,17 @@ msgstr ""
 msgid "This person has a history here now — use 'Remove from team' instead."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1414
+#: lib/klass_hero_web/live/provider/programs_live.ex:1410
 #, elixir-autogen, elixir-format
 msgid "Program created, but some settings could not be saved. Please review the program's limits."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1418
+#: lib/klass_hero_web/live/provider/programs_live.ex:1414
 #, elixir-autogen, elixir-format
 msgid "Program updated, but some settings could not be saved. Please review the program's limits."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1408
+#: lib/klass_hero_web/live/provider/programs_live.ex:1404
 #, elixir-autogen, elixir-format
 msgid "Program updated, but the enrollment capacity was rejected. The previous limits still apply."
 msgstr ""
@@ -7396,7 +7395,7 @@ msgstr ""
 msgid "Go back to the program's usual team"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:299
+#: lib/klass_hero_web/live/provider/participation_live.ex:188
 #, elixir-autogen, elixir-format
 msgid "Lead instructor for this session updated."
 msgstr ""
@@ -7416,17 +7415,17 @@ msgstr ""
 msgid "Remove from this session"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:235
+#: lib/klass_hero_web/live/provider/participation_live.ex:124
 #, elixir-autogen, elixir-format
 msgid "Staff member added to this session."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:259
+#: lib/klass_hero_web/live/provider/participation_live.ex:148
 #, elixir-autogen, elixir-format
 msgid "Staff member removed from this session."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.html.heex:97
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:59
 #, elixir-autogen, elixir-format
 msgid "Staffing"
 msgstr ""
@@ -7437,27 +7436,27 @@ msgid "Staffing — %{date}"
 msgstr ""
 
 #: lib/klass_hero_web/helpers/session_form_handlers.ex:180
-#: lib/klass_hero_web/live/provider/sessions_live.ex:427
+#: lib/klass_hero_web/live/provider/participation_live.ex:601
 #, elixir-autogen, elixir-format
 msgid "That session could not be found."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:243
+#: lib/klass_hero_web/live/provider/participation_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "They are already working this session."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:267
+#: lib/klass_hero_web/live/provider/participation_live.ex:156
 #, elixir-autogen, elixir-format
 msgid "This person leads the session. Make someone else lead before removing them."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:315
+#: lib/klass_hero_web/live/provider/participation_live.ex:204
 #, elixir-autogen, elixir-format
 msgid "This session is back on the program's usual team."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:278
+#: lib/klass_hero_web/live/provider/participation_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "A session needs at least one person. Use “Go back to the program's usual team” to drop this session's own roster."
 msgstr ""
@@ -7889,7 +7888,7 @@ msgstr ""
 msgid "These programs have finished. Their sessions and rosters are no longer available."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:225
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:261
 #, elixir-autogen, elixir-format
 msgid "This program has closed. Its sessions are no longer available."
 msgstr ""
@@ -7974,7 +7973,7 @@ msgstr ""
 msgid "Absent:"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:138
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:158
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:115
 #, elixir-autogen, elixir-format
 msgid "Arrived late"
@@ -8217,8 +8216,8 @@ msgstr ""
 msgid "Over capacity"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:41
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:51
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:49
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:69
 #, elixir-autogen, elixir-format
 msgid "Edit Session"
 msgstr ""
@@ -8228,12 +8227,12 @@ msgstr ""
 msgid "New session — %{title}"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.html.heex:57
+#: lib/klass_hero_web/live/provider/participation_live.html.heex:75
 #, elixir-autogen, elixir-format
 msgid "Save Session"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:103
+#: lib/klass_hero_web/live/provider/participation_live.ex:240
 #, elixir-autogen, elixir-format
 msgid "Session updated"
 msgstr ""
