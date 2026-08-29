@@ -13,7 +13,7 @@
 
   <%= if @session do %>
     <.page_header class="mb-6" container_class="max-w-4xl mx-auto">
-      <:title>{Map.get(@session, :program_name, gettext("Session"))}</:title>
+      <:title>{@session.program_name}</:title>
       <:subtitle>{gettext("Participation")}</:subtitle>
     </.page_header>
 
@@ -48,6 +48,9 @@
           >
             {gettext("Edit Session")}
           </.kh_button>
+          <%!-- Unguarded by status on purpose, unlike Start and Complete above:
+          staffing is editable on any session, including a completed one, because
+          correcting who actually worked a past date is a real need. --%>
           <.kh_button
             id="manage-session-staffing-btn"
             variant={:secondary}
@@ -67,7 +70,7 @@
       <.session_form
         form={@session_form}
         program_locked?={true}
-        program_title={Map.get(@session, :program_name, gettext("Session"))}
+        program_title={@session.program_name}
         schedule_locked?={@session.status != :scheduled}
         submit_label={gettext("Save Session")}
         cancel_event="cancel_edit_session"

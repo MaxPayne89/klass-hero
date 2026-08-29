@@ -9,6 +9,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionNote
+  alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
 
   setup :register_and_log_in_provider
@@ -45,6 +46,36 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     scope = %Scope{user: user, provider: provider}
 
     %{session: session, parent: parent, child: child, record: record, scope: scope}
+  end
+
+  # The fixture rather than `Provider.assign_staff_to_program/1`: the command stages
+  # a staff_assigned_to_program event, which the suite's inline Oban runs at insert
+  # and drags Messaging's handler into a panel test that has nothing to do with it.
+  defp staff_on_program(ctx, staff_member_id) do
+    ProviderFixtures.program_assignment_fixture(%{
+      provider_id: ctx.provider.id,
+      program_id: ctx.session.program_id,
+      staff_member_id: staff_member_id
+    })
+  end
+
+  # No fixture sibling for the session grain, and the override's shape is what the
+  # panel reads — so this one goes through the command.
+  defp staff_on_session(ctx, staff_member_id) do
+    {:ok, _} =
+      KlassHero.Provider.assign_staff_to_session(%{
+        provider_id: ctx.provider.id,
+        session_id: ctx.session.id,
+        staff_member_id: staff_member_id
+      })
+  end
+
+  defp open_panel(ctx) do
+    {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+
+    view |> element("#manage-session-staffing-btn") |> render_click()
+
+    view
   end
 
   # This is what makes the Sessions popup a management surface rather than a
@@ -1019,9 +1050,6 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     end
   end
 
-  # Start moved here from My Sessions (#1501). The detail page reads the session id
-  # from a mount-time assign rather than a client-sent phx-value, which is the rule
-  # ParticipationLiveHandlers.complete_session/2 already states for this surface.
   describe "starting the session" do
     setup [:create_scheduled_session_with_child]
 
@@ -1046,29 +1074,19 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     end
   end
 
-  # Per-session staffing (#782/#1413) moved here from My Sessions (#1501). Unlike the
-  # list, this page opens the panel without a client-sent session id -- it shows one
-  # session and already holds its id.
   describe "session staffing" do
     setup [:create_scheduled_session_with_child]
 
-    setup %{provider: provider, session: session} do
-      regular = insert(:staff_member_schema, provider_id: provider.id, first_name: "Ana", last_name: "Stone")
+    setup ctx do
+      regular = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Ana", last_name: "Stone")
 
-      {:ok, _} =
-        KlassHero.Provider.assign_staff_to_program(%{
-          provider_id: provider.id,
-          program_id: session.program_id,
-          staff_member_id: regular.id
-        })
+      staff_on_program(ctx, regular.id)
 
       %{regular: regular}
     end
 
     test "opens showing the program's roster and says it is inherited", ctx do
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       assert has_element?(view, "#session-staffing-modal")
       assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
@@ -1080,8 +1098,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     test "adding someone keeps the program's roster and appends to it", ctx do
       substitute = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Bea", last_name: "Stone")
 
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       view
       |> element("#session-staffing-add-form")
@@ -1096,8 +1113,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     end
 
     test "the picker does not offer people the session already shows", ctx do
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       refute has_element?(view, "#session-staffing-add-select option[value='#{ctx.regular.id}']")
       assert has_element?(view, "#session-staffing-nobody-addable")
@@ -1106,15 +1122,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     test "promote and remove are offered on a roster that is still inherited", ctx do
       other = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Fay", last_name: "Stone")
 
-      {:ok, _} =
-        KlassHero.Provider.assign_staff_to_program(%{
-          provider_id: ctx.provider.id,
-          program_id: ctx.session.program_id,
-          staff_member_id: other.id
-        })
+      staff_on_program(ctx, other.id)
 
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       assert has_element?(view, "#promote-session-staff-#{ctx.regular.id}")
       assert has_element?(view, "#remove-session-staff-#{ctx.regular.id}:not([disabled])")
@@ -1127,8 +1137,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     test "a foreign staff member cannot be promoted", ctx do
       stranger = insert(:staff_member_schema, provider_id: insert(:provider_profile_schema).id)
 
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       render_click(view, "promote_session_lead", %{"staff-id" => stranger.id})
 
@@ -1139,15 +1148,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     test "removing works on an inherited roster and leaves the rest", ctx do
       other = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Cal", last_name: "Stone")
 
-      {:ok, _} =
-        KlassHero.Provider.assign_staff_to_program(%{
-          provider_id: ctx.provider.id,
-          program_id: ctx.session.program_id,
-          staff_member_id: other.id
-        })
+      staff_on_program(ctx, other.id)
 
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       view |> element("#remove-session-staff-#{ctx.regular.id}") |> render_click()
 
@@ -1156,8 +1159,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     end
 
     test "the last member's removal is disabled rather than hidden", ctx do
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       assert has_element?(view, "#remove-session-staff-#{ctx.regular.id}[disabled]")
     end
@@ -1165,15 +1167,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     test "promoting a session lead blocks their removal", ctx do
       substitute = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Dee", last_name: "Stone")
 
-      {:ok, _} =
-        KlassHero.Provider.assign_staff_to_session(%{
-          provider_id: ctx.provider.id,
-          session_id: ctx.session.id,
-          staff_member_id: substitute.id
-        })
+      staff_on_session(ctx, substitute.id)
 
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       view |> element("#promote-session-staff-#{substitute.id}") |> render_click()
 
@@ -1184,20 +1180,34 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     test "reverting returns the session to the program roster", ctx do
       substitute = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Eve", last_name: "Stone")
 
-      {:ok, _} =
-        KlassHero.Provider.assign_staff_to_session(%{
-          provider_id: ctx.provider.id,
-          session_id: ctx.session.id,
-          staff_member_id: substitute.id
-        })
+      staff_on_session(ctx, substitute.id)
 
-      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
-      view |> element("#manage-session-staffing-btn") |> render_click()
+      view = open_panel(ctx)
 
       view |> element("#session-staffing-revert-btn") |> render_click()
 
       assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
       refute has_element?(view, "#session-staffing-revert-btn")
+    end
+
+    # The panel's buttons only render inside the modal, but that gates nothing:
+    # a client can push any event name over the channel. These used to read the
+    # session id out of the modal assign, so firing one with the panel closed
+    # matched against nil and took the LiveView down.
+    test "a staffing event fired with the panel closed does not crash the page", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+
+      for {event, params} <- [
+            {"remove_session_staff", %{"staff-id" => ctx.regular.id}},
+            {"promote_session_lead", %{"staff-id" => ctx.regular.id}},
+            {"revert_session_staffing", %{}},
+            {"assign_session_staff", %{"add_staff" => %{"staff_id" => ctx.regular.id}}}
+          ] do
+        render_hook(view, event, params)
+
+        assert has_element?(view, "#manage-session-staffing-btn"),
+               "#{event} took the LiveView down when fired with the panel closed"
+      end
     end
   end
 end

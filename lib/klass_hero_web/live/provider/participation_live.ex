@@ -82,14 +82,12 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   # --- Session staffing panel (#782) ---------------------------------------
   #
-  # Moved here from My Sessions (#1501). The list sent the session id from the
-  # client because it rendered one trigger per row; this page shows one session
-  # and reads the id from the same mount-time assign the lifecycle writes use.
-  # The panel's own events then carry it in server state.
+  # Every event here reads the session id from the mount-time assign, never from
+  # the client — same rule as the lifecycle writes above.
 
   @impl true
   def handle_event("manage_session_staffing", _params, socket) do
-    case build_session_staffing_modal(socket.assigns.session_id, socket) do
+    case build_session_staffing_modal(socket) do
       {:ok, modal} ->
         {:noreply, assign(socket, :session_staffing_modal, modal)}
 
@@ -109,7 +107,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   end
 
   def handle_event("assign_session_staff", %{"add_staff" => %{"staff_id" => staff_member_id}}, socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
+    session_id = socket.assigns.session_id
 
     %{
       provider_id: socket.assigns.provider_id,
@@ -140,7 +138,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   @impl true
   def handle_event("remove_session_staff", %{"staff-id" => staff_member_id}, socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
+    session_id = socket.assigns.session_id
 
     case Provider.unassign_staff_from_session(session_id, staff_member_id, socket.assigns.provider_id) do
       {:ok, _assignment} ->
@@ -180,7 +178,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   @impl true
   def handle_event("promote_session_lead", %{"staff-id" => staff_member_id}, socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
+    session_id = socket.assigns.session_id
 
     case Provider.set_session_lead_instructor(session_id, staff_member_id, socket.assigns.provider_id) do
       {:ok, _assignment} ->
@@ -196,7 +194,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   @impl true
   def handle_event("revert_session_staffing", _params, socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
+    session_id = socket.assigns.session_id
 
     case Provider.revert_session_to_program_roster(session_id, socket.assigns.provider_id) do
       {:ok, _count} ->
@@ -548,8 +546,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   # is the IDOR guard *and* the source of the override-vs-program fact the panel
   # renders — one call answers "may they see this?" and "where did this roster come
   # from?".
-  defp build_session_staffing_modal(session_id, socket) do
+  defp build_session_staffing_modal(socket) do
     provider_id = socket.assigns.provider_id
+    session_id = socket.assigns.session_id
 
     with {:ok, staffing} <- Provider.get_session_staffing_for_provider(provider_id, session_id) do
       lead_id = staffing.lead && staffing.lead.id
@@ -562,13 +561,12 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
       assignable =
         provider_id
         |> Provider.list_assignable_staff_for_session(session_id)
-        |> staff_to_options()
+        |> ProgramStaffingPresenter.assignable_options()
 
       {:ok,
        %{
-         session_id: session_id,
          session_label: session_label(socket),
-         program_title: Map.get(socket.assigns.session, :program_name, gettext("Program")),
+         program_title: socket.assigns.session.program_name,
          overridden?: SessionStaffing.overridden?(staffing),
          members: members,
          assignable_options: assignable,
@@ -582,25 +580,14 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   # Every mutation re-reads rather than patching the assign in place: the context
   # owns who works the session and whether that roster is its own.
   defp refresh_session_staffing(socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
-
-    case build_session_staffing_modal(session_id, socket) do
+    case build_session_staffing_modal(socket) do
       {:ok, modal} -> assign(socket, :session_staffing_modal, modal)
       {:error, :not_found} -> assign(socket, :session_staffing_modal, nil)
     end
   end
 
-  # My Sessions re-read the session here, because a stream is not enumerable state
-  # to search. This page already holds it.
   defp session_label(socket) do
-    case socket.assigns.session do
-      %{session_date: %Date{} = date} -> Calendar.strftime(date, "%a, %d %b")
-      _other -> gettext("Session")
-    end
-  end
-
-  defp staff_to_options(members) do
-    Enum.map(members, fn m -> {Provider.staff_member_full_name(m), m.id} end)
+    Calendar.strftime(socket.assigns.session.session_date, "%a, %d %b")
   end
 
   defp session_staffing_not_found(socket, action, subject_id) do
