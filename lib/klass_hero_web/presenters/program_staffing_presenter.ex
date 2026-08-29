@@ -12,6 +12,7 @@ defmodule KlassHeroWeb.Presenters.ProgramStaffingPresenter do
   need bio and qualifications, this needs none of that and does need the raw id.
   """
 
+  alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
 
@@ -20,6 +21,18 @@ defmodule KlassHeroWeb.Presenters.ProgramStaffingPresenter do
     {leads, others} = Enum.split_with(staff_members, &lead?(&1, lead_id))
 
     Enum.map(leads, &to_row(&1, true)) ++ Enum.map(others, &to_row(&1, false))
+  end
+
+  @doc """
+  The `{label, id}` pairs behind a staffing panel's "add someone" picker.
+
+  Beside `for_panel/2` because it answers the same question — how a staff member
+  is named in this panel — for the other half of the same screen. Held apart from
+  the rows because a picker needs no card view, only a label.
+  """
+  @spec assignable_options([StaffMember.t()]) :: [{String.t(), String.t()}]
+  def assignable_options(staff_members) when is_list(staff_members) do
+    for member <- staff_members, do: {Provider.staff_member_full_name(member), member.id}
   end
 
   defp to_row(%StaffMember{} = staff, lead?) do
