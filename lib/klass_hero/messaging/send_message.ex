@@ -68,6 +68,7 @@ defmodule KlassHero.Messaging.SendMessage do
            ) do
       update_sender_read_status(conversation_id, sender_id)
       Notifications.message_sent(conversation_id, message_with_attachments.id)
+      notify_conversation_lists(conversation_id)
 
       Logger.info("Message sent",
         message_id: message_with_attachments.id,
@@ -286,6 +287,19 @@ defmodule KlassHero.Messaging.SendMessage do
       :staff -> :staff
       :outsider -> :parent
     end
+  end
+
+  # Every active participant, sender included — their list now previews this message.
+  #
+  # Notifying from here rather than from a projection is only correct because the
+  # inbox reads the write model live: the insert has committed, so the refetch this
+  # triggers sees the message. While the list came from `conversation_summaries` it
+  # was not, which is why the projection sent this itself.
+  defp notify_conversation_lists(conversation_id) do
+    conversation_id
+    |> KlassHero.Messaging.list_participants()
+    |> Enum.map(& &1.user_id)
+    |> Notifications.conversations_changed_for()
   end
 
   defp update_sender_read_status(conversation_id, sender_id) do

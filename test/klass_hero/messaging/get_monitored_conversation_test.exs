@@ -88,7 +88,7 @@ defmodule KlassHero.Messaging.GetMonitoredConversationTest do
     test "leaves the real participants' last_read_at untouched" do
       conversation = insert(:conversation_schema)
       parent = AccountsFixtures.user_fixture()
-      read_at = ~U[2026-01-01 12:00:00Z]
+      read_at = ~U[2026-01-01 12:00:00.000000Z]
 
       participant =
         insert(:participant_schema,

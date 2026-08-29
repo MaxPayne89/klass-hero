@@ -7,8 +7,8 @@ defmodule KlassHero.Messaging.RemoveAssignedStaff do
 
   ## Why events-as-data?
 
-  The `ConversationSummaries` projection reads from the DB on a separate
-  connection. To uphold read-your-own-writes, dispatches must occur after
+  A consumer reads from the DB on a separate connection, so to uphold
+  read-your-own-writes, dispatches must occur after
   `Repo.transaction` returns `{:ok, _}`. See
   `KlassHero.Messaging.AddAssignedStaff` for the
   symmetric add command and the architectural rationale.

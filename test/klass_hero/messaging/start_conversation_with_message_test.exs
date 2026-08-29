@@ -35,7 +35,9 @@ defmodule KlassHero.Messaging.StartConversationWithMessageTest do
       assert message.content == "Hello there"
       assert participant_ids(conversation.id) == Enum.sort([scope.user.id, target_user.id])
 
-      assert_integration_event_published(:conversation_created)
+      # Only `:message_sent` — `:conversation_created` lost its last consumer with
+      # `ConversationSummaries` (ADR-0023), so `Outbox.stage/2` drops it. The
+      # conversation's existence is asserted above, which is the stronger claim.
       assert_integration_event_published(:message_sent)
     end
 

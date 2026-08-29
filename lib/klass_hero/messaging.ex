@@ -56,10 +56,11 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.ComposeTarget
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.EmailReply
   alias KlassHero.Messaging.EmailSanitizer
   alias KlassHero.Messaging.InboundEmail
+  alias KlassHero.Messaging.InboxConversation
+  alias KlassHero.Messaging.ListConversations
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Participant
@@ -525,9 +526,9 @@ defmodule KlassHero.Messaging do
   @doc """
   Lists every conversation on the platform, for a platform admin.
 
-  Read-only monitoring (#744). Fails closed for a non-admin scope. Unlike
-  `list_conversations/2` this does not read the per-user `conversation_summaries`
-  projection — an admin has no row there.
+  Read-only monitoring (#744). Fails closed for a non-admin scope. Platform-wide
+  rather than participant-scoped, which is what separates it from
+  `list_conversations/2`.
 
   ## Options
   `:provider_id`, `:type`, `:limit`, `:before`. See
@@ -543,8 +544,9 @@ defmodule KlassHero.Messaging do
   Reads one conversation's thread for a platform admin who is not a participant.
 
   Read-only monitoring (#744). Fails closed for a non-admin scope. Deliberately has
-  no `:mark_as_read` option: `last_read_at` feeds three separate unread counters, and
-  an admin viewing a thread must not disturb any of them.
+  no `:mark_as_read` option: `last_read_at` feeds every unread read in the context —
+  the nav total, the per-card badge and the in-thread count — and an admin viewing a
+  thread must not disturb any of them.
   """
   @spec get_monitored_conversation(Scope.t(), String.t(), keyword()) ::
           {:ok, map()} | {:error, :unauthorized | :not_found}
@@ -612,7 +614,8 @@ defmodule KlassHero.Messaging do
   Returns enrolled child names and other participant name for a conversation/user pair.
 
   Used by the web layer to build enriched conversation titles, e.g. "Sarah for Emma, Liam".
-  Reads from the denormalized conversation_summaries read model.
+  Derived live by `KlassHero.Messaging.ConversationContext`, the same derivation the
+  inbox runs over a page, so a thread's title and its card cannot disagree.
 
   ## Parameters
   - conversation_id: The conversation to look up
@@ -1008,15 +1011,6 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Total unread message count across a user's conversations."
-  @spec conversation_total_unread_count(String.t()) :: non_neg_integer()
-  def conversation_total_unread_count(user_id) do
-    case Repo.one(ConversationQueries.total_unread_count(user_id)) do
-      nil -> 0
-      count -> count
-    end
-  end
-
   @doc """
   Ids of active program conversations the user is NOT a participant of.
 
@@ -1082,186 +1076,45 @@ defmodule KlassHero.Messaging do
     |> Repo.all()
   end
 
-  # === Persistence — conversation summaries (read model) ===
+  # === Reads — the inbox ===
 
   @doc """
-  Lists a user's non-archived conversation summaries, newest first. Limit+1 paginated.
+  Lists a user's non-archived conversations, newest message first. Limit+1 paginated.
 
-  Returns the `ConversationSummary` read-table structs themselves: the schema is the
-  DTO (`KlassHero.Shared.ReadTable`), so callers read its flat fields directly.
+  Read live from the write model (ADR-0023) and returned as `InboxConversation`
+  structs, which carry the field names `MessagingComponents.conversation_card/1`
+  renders — the same shape `ListStaffConversations` returns, which is why one
+  component serves both inboxes.
 
-  Rows with no message are excluded — the SQL form of
-  `ConversationSummary.has_latest_message?/1`. Creation now waits for the first
-  message, so this only catches rows predating that and the window where a send
-  failed after its conversation committed.
+  A conversation with no message does not appear: the page query's lateral join onto
+  the newest message is INNER.
 
   ## Examples
 
       Messaging.list_conversations(user_id)
-      #=> {:ok, [%ConversationSummary{conversation_id: "…", unread_count: 2}], false}
+      #=> {:ok, [%InboxConversation{conversation_id: "…", unread_count: 2}], false}
 
   """
   @spec list_conversations(String.t(), keyword()) ::
-          {:ok, [ConversationSummary.t()], boolean()}
-  def list_conversations(user_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, 25)
+          {:ok, [InboxConversation.t()], boolean()}
+  defdelegate list_conversations(user_id, opts \\ []), to: ListConversations, as: :execute
 
-    schemas =
-      from(s in ConversationSummary,
-        where:
-          s.user_id == ^user_id and is_nil(s.archived_at) and
-            (not is_nil(s.latest_message_content) or s.has_attachments),
-        order_by: [desc: s.latest_message_at, desc: s.id],
-        limit: ^(limit + 1)
-      )
-      |> Repo.all()
-
-    {:ok, Enum.take(schemas, limit), length(schemas) > limit}
-  end
-
-  @doc "Sum of unread counts across a user's non-archived conversation summaries."
-  @spec summaries_total_unread_count(String.t()) :: non_neg_integer()
-  def summaries_total_unread_count(user_id) do
-    from(s in ConversationSummary,
-      where: s.user_id == ^user_id and is_nil(s.archived_at),
-      select: coalesce(sum(s.unread_count), 0)
-    )
-    |> Repo.one()
-  end
-
-  @doc "True if any summary row for the conversation carries the given system-note token."
+  @doc "True if the conversation already carries a system message stamped with this token."
   @spec has_system_note?(String.t(), String.t()) :: boolean()
   def has_system_note?(conversation_id, token) do
-    # The PostgreSQL `?` key-exists operator is backed by the GIN index on system_notes.
-    from(s in ConversationSummary,
+    # The system message *is* the record — its content is "<token> Re: <subject>",
+    # so there is nothing to denormalise and nothing to keep in sync. Served by
+    # the (conversation_id, inserted_at) index, and bounded by one conversation,
+    # which is what #431 needed when the old check scanned only 100 messages.
+    #
+    # Not filtered on deleted_at, deliberately: a note whose message was later
+    # soft-deleted still counts as posted, so a second tap must not re-add it.
+    from(m in Message,
       where:
-        s.conversation_id == ^conversation_id and
-          fragment("? \\? ?", s.system_notes, ^token)
+        m.conversation_id == ^conversation_id and m.message_type == :system and
+          like(m.content, ^(token <> "%"))
     )
     |> Repo.exists?()
-  end
-
-  @doc "Returns the enrolled child names and other-participant name for a conversation summary row."
-  @spec get_conversation_summary_context(String.t(), String.t()) :: %{
-          enrolled_child_names: [String.t()],
-          other_participant_name: String.t() | nil
-        }
-  def get_conversation_summary_context(conversation_id, user_id) do
-    from(s in ConversationSummary,
-      where: s.conversation_id == ^conversation_id and s.user_id == ^user_id,
-      select: %{
-        enrolled_child_names: s.enrolled_child_names,
-        other_participant_name: s.other_participant_name
-      }
-    )
-    |> Repo.one()
-    |> case do
-      nil ->
-        %{enrolled_child_names: [], other_participant_name: nil}
-
-      %{enrolled_child_names: names, other_participant_name: other} ->
-        %{enrolled_child_names: names || [], other_participant_name: other}
-    end
-  end
-
-  @doc """
-  Synchronously stamps a system-note token onto a conversation's summary rows.
-
-  Complements the async projection: if the write-through races ahead of the
-  projection, seed minimal rows so the token isn't lost (the projection's upsert
-  merges the remaining fields when it catches up).
-  """
-  @spec write_system_note_token(String.t(), String.t()) :: :ok
-  def write_system_note_token(conversation_id, token) do
-    context_span entity: "conversation_summary" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      token_json = %{token => DateTime.to_iso8601(now)}
-
-      {updated, _} =
-        from(s in ConversationSummary,
-          where: s.conversation_id == ^conversation_id,
-          update: [
-            set: [
-              system_notes: fragment("coalesce(system_notes, '{}')::jsonb || ?::jsonb", ^token_json),
-              updated_at: ^now
-            ]
-          ]
-        )
-        |> Repo.update_all([])
-
-      if updated == 0 do
-        seed_conversation_summary_rows_with_token(conversation_id, token_json, now)
-      end
-
-      :ok
-    end
-  end
-
-  defp seed_conversation_summary_rows_with_token(conversation_id, token_json, now) do
-    conversation =
-      from(c in Conversation,
-        where: c.id == ^conversation_id,
-        select: %{type: c.type, provider_id: c.provider_id, subject: c.subject}
-      )
-      |> Repo.one()
-
-    participant_user_ids =
-      from(p in Participant,
-        where: p.conversation_id == ^conversation_id and is_nil(p.left_at),
-        select: p.user_id
-      )
-      |> Repo.all()
-
-    cond do
-      is_nil(conversation) ->
-        Logger.warning(
-          "seed_conversation_summary_rows_with_token: conversation not found, projection will handle",
-          conversation_id: conversation_id
-        )
-
-      participant_user_ids == [] ->
-        Logger.warning(
-          "seed_conversation_summary_rows_with_token: no active participants, projection will handle",
-          conversation_id: conversation_id
-        )
-
-      true ->
-        entries =
-          Enum.map(participant_user_ids, fn user_id ->
-            %{
-              id: Ecto.UUID.generate(),
-              conversation_id: conversation_id,
-              user_id: user_id,
-              conversation_type: conversation.type,
-              provider_id: conversation.provider_id,
-              subject: conversation.subject,
-              system_notes: token_json,
-              unread_count: 0,
-              participant_count: length(participant_user_ids),
-              inserted_at: now,
-              updated_at: now
-            }
-          end)
-
-        # JSONB || merge preserves tokens the projection wrote between our
-        # update_all and this insert_all.
-        Repo.insert_all(ConversationSummary, entries,
-          on_conflict:
-            from(s in ConversationSummary,
-              update: [
-                set: [
-                  system_notes:
-                    fragment(
-                      "coalesce(?.system_notes, '{}')::jsonb || excluded.system_notes::jsonb",
-                      s
-                    ),
-                  updated_at: fragment("excluded.updated_at")
-                ]
-              ]
-            ),
-          conflict_target: [:conversation_id, :user_id]
-        )
-    end
   end
 
   # === Persistence — messages ===
@@ -1712,8 +1565,9 @@ defmodule KlassHero.Messaging do
   # written in the same second would fall on the wrong side of the `>` comparison every
   # unread counter makes and be silently marked read.
   #
-  # Soft-deleted messages count towards the anchor even though they are invisible — see
-  # `MessageQueries.newest_inserted_at_by_conversation/1` for why.
+  # Soft-deleted messages count towards the anchor even though they are invisible: the
+  # cursor must sit at or after everything already in the conversation, or a newcomer
+  # gets badged for history. See `MessageQueries.newest_inserted_at_by_conversation/1`.
   defp seating_cursors(conversation_ids) do
     conversation_ids
     |> MessageQueries.newest_inserted_at_by_conversation()

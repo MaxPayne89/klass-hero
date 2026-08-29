@@ -20,13 +20,13 @@ defmodule KlassHero.Messaging.NewMessageEmailHandler do
 
   ## Why the read-up filter queries the write side
 
-  Consumers of one event run **sequentially**, and `ConversationSummaries` is
-  also registered on `message_sent`. Filtering on its `unread_count` would mean
-  reading a number that consumer may or may not have already incremented,
-  depending on registry order — and if it ran first, every recipient would look
-  "already unread" and no email would ever send. So the filter reads
-  `conversation_participants.last_read_at` against `messages` instead, which no
-  consumer mutates.
+  The filter reads `conversation_participants.last_read_at` against `messages`,
+  which no consumer mutates. It once had to: `ConversationSummaries` was also
+  registered on `message_sent`, consumers of one event run **sequentially**, and
+  filtering on its `unread_count` meant reading a number that consumer may or may
+  not have incremented yet — if it ran first, every recipient looked "already
+  unread" and no email ever sent. That projection is gone (ADR-0023), but the rule
+  it forced is the right one for any consumer added here later.
   """
 
   @behaviour KlassHero.Shared.ForHandlingEvents
@@ -70,9 +70,15 @@ defmodule KlassHero.Messaging.NewMessageEmailHandler do
   # nothing new and is what turns a busy thread into a mute.
   #
   # The `is_nil(last_read_at) or inserted_at > last_read_at` half is the same
-  # "has this participant caught up" rule as `ConversationQueries.total_unread_count/1`
-  # and `MessageQueries.count_unread/2` — three expressions of one rule, which is
-  # why a change to any of them has to visit the others. See #1531.
+  # "has this participant caught up" rule as `MessageQueries.count_unread/2`.
+  #
+  # The unread *counters* no longer belong to that set. Retiring the projection
+  # (ADR-0023) gave `ConversationQueries.total_unread_count/1` an
+  # `m.sender_id != ^user_id` filter, restoring what the projection had done all
+  # along and the dead live query had not. This query has no equivalent, so a
+  # recipient's own earlier message still reads as outstanding mail and suppresses
+  # the email; `count_unread/2` takes no user id and structurally cannot have one.
+  # #1531 is where that gets settled.
   defp caught_up_user_ids(conversation_id, message_id) do
     from(p in Participant,
       where: p.conversation_id == ^conversation_id and is_nil(p.left_at),

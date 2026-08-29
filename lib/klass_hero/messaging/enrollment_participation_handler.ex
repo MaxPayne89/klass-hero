@@ -79,8 +79,9 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandler do
     RetryHelpers.retry_and_normalize(operation, context)
   end
 
-  # Participants and their events commit together, so the delivery job reaches
-  # ConversationSummaries only after the rows it describes exist.
+  # Participants and their events commit together, so the delivery job reaches any
+  # consumer only after the rows it describes exist. Nothing consumes
+  # :participant_added today (ADR-0023), so Outbox.stage/2 drops it.
   defp add_parent_to_broadcast(program_id, parent_user_id) do
     case Messaging.list_active_broadcast_ids_without_participant(program_id, parent_user_id) do
       [] ->

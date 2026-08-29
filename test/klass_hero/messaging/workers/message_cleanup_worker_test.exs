@@ -50,24 +50,26 @@ defmodule KlassHero.Messaging.Workers.MessageCleanupWorkerTest do
       EventTestHelper.assert_no_integration_events_published()
     end
 
-    test "archives conversations for ended programs and publishes event" do
+    test "archives conversations for ended programs" do
       provider = insert(:provider_profile_schema)
 
       # Program that ended 40 days ago
       past_end_date = DateTime.utc_now() |> DateTime.add(-40, :day)
       program = insert(:program_schema, end_date: past_end_date)
 
-      insert(:conversation_schema,
-        type: "program_broadcast",
-        provider_id: provider.id,
-        program_id: program.id
-      )
+      conversation =
+        insert(:conversation_schema,
+          type: "program_broadcast",
+          provider_id: provider.id,
+          program_id: program.id
+        )
 
       job = %Oban.Job{args: %{}}
 
       assert :ok = MessageCleanupWorker.perform(job)
 
-      EventTestHelper.assert_integration_event_published(:conversations_archived, %{reason: :program_ended})
+      assert {:ok, %{archived_at: %DateTime{}}} =
+               KlassHero.Messaging.get_conversation_by_id(conversation.id)
     end
 
     test "ignores non-integer days_after_program_end values" do

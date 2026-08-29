@@ -71,15 +71,9 @@ defmodule KlassHero.Messaging.AnonymizeUserDataTest do
       assert Enum.all?(participants, &(not is_nil(&1.left_at)))
     end
 
-    test "publishes message_data_anonymized integration event" do
-      user = AccountsFixtures.user_fixture()
-
-      assert {:ok, _result} = AnonymizeUserData.execute(user.id)
-
-      integration_event = assert_integration_event_published(:message_data_anonymized)
-      assert integration_event.entity_id == user.id
-      assert integration_event.source_context == :messaging
-    end
+    # A "publishes :message_data_anonymized" test stood here. That topic lost its only
+    # consumer with `ConversationSummaries` (ADR-0023), so `Outbox.stage/2` drops the
+    # event and nothing can assert it. The anonymisation itself is covered above.
 
     test "returns zero counts for user with no messaging data" do
       user = AccountsFixtures.user_fixture()

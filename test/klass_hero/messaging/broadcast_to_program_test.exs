@@ -8,8 +8,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.BroadcastToProgram
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.ConversationSummaries
   alias KlassHero.Messaging.Message
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.ProviderFixtures
 
@@ -249,13 +249,19 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
     end
   end
 
-  describe "execute/4 — :participant_added event dispatch" do
+  # These asserted the `:participant_added` events a broadcast emits. That topic lost
+  # its only consumer with `ConversationSummaries` (ADR-0023), so `Outbox.stage/2` drops
+  # it — including the refutation, which would have gone on passing while asserting
+  # nothing (#1142). Seating is the fact the events stood for, and the inbox now reads
+  # it live, so the last test asserts the thing users actually see with no projection
+  # to drive by hand.
+  describe "execute/4 — who the broadcast seats" do
     setup do
       setup_test_integration_events()
       :ok
     end
 
-    test "first broadcast emits :participant_added with source :broadcast_setup carrying sender + parent user_ids",
+    test "first broadcast seats the sender and every enrolled parent",
          %{program: program, scope: scope} do
       %{user: parent1_user} = enroll_parent(program)
       %{user: parent2_user} = enroll_parent(program)
@@ -263,73 +269,39 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert {:ok, conversation, _msg, _count} =
                BroadcastToProgram.execute(scope, program.id, "Hi")
 
-      event =
-        get_published_integration_events()
-        |> Enum.find(
-          &match?(
-            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
-            &1
-          )
-        )
-
-      assert event,
-             "expected a :participant_added integration event with source :broadcast_setup to be published"
-
-      assert event.entity_id == conversation.id
-
-      assert Enum.sort(event.payload.participant_user_ids) ==
-               Enum.sort([scope.user.id, parent1_user.id, parent2_user.id])
+      for user_id <- [scope.user.id, parent1_user.id, parent2_user.id] do
+        assert KlassHero.Messaging.participant?(conversation.id, user_id),
+               "expected #{user_id} to be seated in the broadcast"
+      end
     end
 
-    test "re-broadcast on existing conversation with same participants emits NO :broadcast_setup event",
+    test "re-broadcast with unchanged enrolment seats nobody new",
          %{program: program, scope: scope} do
       enroll_parent(program)
 
-      assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "first")
+      assert {:ok, conversation, _, _} = BroadcastToProgram.execute(scope, program.id, "first")
+      before = participant_count(conversation.id)
 
-      clear_integration_events()
+      assert {:ok, ^conversation, _, _} = BroadcastToProgram.execute(scope, program.id, "second")
 
-      assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "second")
-
-      refute Enum.any?(
-               get_published_integration_events(),
-               &match?(
-                 %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
-                 &1
-               )
-             ),
-             "expected no :broadcast_setup event on re-broadcast when participants are unchanged"
+      assert participant_count(conversation.id) == before
     end
 
-    test "re-broadcast that adds a NEW enrolled parent emits :broadcast_setup with only the new user_id",
+    test "re-broadcast seats a parent who enrolled in between",
          %{program: program, scope: scope} do
       enroll_parent(program)
 
-      assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "first")
+      assert {:ok, conversation, _, _} = BroadcastToProgram.execute(scope, program.id, "first")
 
-      clear_integration_events()
-
-      # New parent enrolled between broadcasts.
       %{user: parent2_user} = enroll_parent(program)
+      refute KlassHero.Messaging.participant?(conversation.id, parent2_user.id)
 
-      assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "second")
+      assert {:ok, ^conversation, _, _} = BroadcastToProgram.execute(scope, program.id, "second")
 
-      event =
-        get_published_integration_events()
-        |> Enum.find(
-          &match?(
-            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
-            &1
-          )
-        )
-
-      assert event,
-             "expected a :participant_added event with source :broadcast_setup for the newly-enrolled parent"
-
-      assert event.payload.participant_user_ids == [parent2_user.id]
+      assert KlassHero.Messaging.participant?(conversation.id, parent2_user.id)
     end
 
-    test "sender and each parent see broadcast in inbox after projection runs (no server restart)",
+    test "sender and each parent see the broadcast in their inbox",
          %{program: program, scope: scope} do
       %{user: parent1_user} = enroll_parent(program)
       %{user: parent2_user} = enroll_parent(program)
@@ -337,27 +309,17 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert {:ok, conversation, _msg, _count} =
                BroadcastToProgram.execute(scope, program.id, "Important")
 
-      event =
-        get_published_integration_events()
-        |> Enum.find(
-          &match?(
-            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
-            &1
-          )
-        )
-
-      assert event, "expected :broadcast_setup event to be dispatched"
-
-      # Drive the projection directly — deterministic, avoids PubSub timing.
-      ConversationSummaries.handle_event(:participant_added, event)
-
       for user_id <- [scope.user.id, parent1_user.id, parent2_user.id] do
-        {:ok, summaries, _has_more} = KlassHero.Messaging.list_conversations(user_id)
+        {:ok, conversations, _has_more} = KlassHero.Messaging.list_conversations(user_id)
 
-        assert Enum.any?(summaries, &(&1.conversation_id == conversation.id)),
+        assert Enum.any?(conversations, &(&1.conversation_id == conversation.id)),
                "expected user #{user_id} to see broadcast conversation #{conversation.id} in inbox; " <>
-                 "got #{inspect(Enum.map(summaries, & &1.conversation_id))}"
+                 "got #{inspect(Enum.map(conversations, & &1.conversation_id))}"
       end
+    end
+
+    defp participant_count(conversation_id) do
+      Repo.aggregate(from(p in Participant, where: p.conversation_id == ^conversation_id), :count)
     end
   end
 

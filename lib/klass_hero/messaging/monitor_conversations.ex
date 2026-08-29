@@ -7,11 +7,10 @@ defmodule KlassHero.Messaging.MonitorConversations do
   strictly read-only: it creates no `Participant` row, writes no `last_read_at`, and
   subscribes to nothing.
 
-  It deliberately does **not** read the `conversation_summaries` projection. That
-  table is keyed `(conversation_id, user_id)`, so an admin has no row in it, and
-  reading it anyway would yield one row per participant per conversation. The
-  write-side `conversations` table is the only correct source for a platform-wide
-  view.
+  Every other read in this context is keyed by a participant, and an admin is not one.
+  A platform-wide view therefore has to come from the write-side `conversations` table
+  directly — a per-participant read would either return nothing for an admin or fan out
+  to one row per participant per conversation.
   """
 
   use KlassHero.Shared.Tracing

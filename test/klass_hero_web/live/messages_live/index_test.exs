@@ -1,10 +1,10 @@
 defmodule KlassHeroWeb.MessagesLive.IndexTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Messaging.ConversationSummary
-  alias KlassHero.Repo
+  alias KlassHero.AccountsFixtures
 
   describe "authentication" do
     test "requires authentication", %{conn: conn} do
@@ -28,83 +28,40 @@ defmodule KlassHeroWeb.MessagesLive.IndexTest do
   describe "conversation list" do
     setup :register_and_log_in_user
 
-    test "renders conversation list", %{conn: conn, user: user} do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-      summary =
-        insert_summary(%{
-          user_id: user.id,
-          latest_message_content: "Hello there!",
-          latest_message_sender_id: user.id,
-          latest_message_at: now,
-          other_participant_name: "Test Provider"
-        })
+    test "renders a conversation the user participates in", %{conn: conn, user: user} do
+      conversation = seed_conversation(user, "Hello there!")
 
       {:ok, view, _html} = live(conn, ~p"/messages")
 
       assert has_element?(view, "#conversations")
-      # Stream identity is the conversation, not the summary row that mirrors it.
-      assert has_element?(view, "#conversations-#{summary.conversation_id}")
+      assert has_element?(view, "#conversations-#{conversation.id}")
       refute has_element?(view, "h3", "No conversations yet")
     end
 
-    test "renders conversation with unread count", %{conn: conn, user: user} do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-      insert_summary(%{
-        user_id: user.id,
-        latest_message_content: "Message",
-        latest_message_sender_id: Ecto.UUID.generate(),
-        latest_message_at: now,
-        unread_count: 3,
-        last_read_at: nil,
-        other_participant_name: "Other User"
-      })
+    test "badges a message that arrived from someone else", %{conn: conn, user: user} do
+      seed_conversation(user, "Message from them")
 
       {:ok, view, _html} = live(conn, ~p"/messages")
 
-      assert has_element?(view, "#conversations")
+      assert has_element?(view, "[data-role=unread-count]")
     end
 
-    test "orders conversations by most recent", %{conn: conn, user: user} do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-      insert_summary(%{
-        user_id: user.id,
-        latest_message_content: "Old message",
-        latest_message_sender_id: user.id,
-        latest_message_at: DateTime.add(now, -60, :second),
-        other_participant_name: "Old Contact"
-      })
-
-      insert_summary(%{
-        user_id: user.id,
-        latest_message_content: "New message",
-        latest_message_sender_id: user.id,
-        latest_message_at: now,
-        other_participant_name: "New Contact"
-      })
+    test "orders conversations by their newest message", %{conn: conn, user: user} do
+      older = seed_conversation(user, "Old message", seconds_ago: 600)
+      newer = seed_conversation(user, "New message", seconds_ago: 10)
 
       {:ok, view, _html} = live(conn, ~p"/messages")
+      html = render(view)
 
-      assert has_element?(view, "#conversations")
+      assert :binary.match(html, newer.id) < :binary.match(html, older.id)
     end
 
     test "clicking conversation navigates to show page", %{conn: conn, user: user} do
-      conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-      insert_summary(%{
-        conversation_id: conversation_id,
-        user_id: user.id,
-        latest_message_at: now,
-        other_participant_name: "Test Provider"
-      })
+      conversation = seed_conversation(user, "Test message")
 
       {:ok, view, _html} = live(conn, ~p"/messages")
 
-      html = render(view)
-      assert html =~ "/messages/#{conversation_id}"
+      assert render(view) =~ "/messages/#{conversation.id}"
     end
   end
 
@@ -118,33 +75,25 @@ defmodule KlassHeroWeb.MessagesLive.IndexTest do
     end
   end
 
-  defp insert_summary(attrs) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+  # The inbox is derived from the write model, so a fixture here is a real
+  # conversation with a real participant and a real message. There is no read
+  # table to seed any more, and a seeded row would simply not be read.
+  defp seed_conversation(user, content, opts \\ []) do
+    sender = AccountsFixtures.user_fixture()
+    conversation = insert(:conversation_schema)
 
-    defaults = %{
-      id: Ecto.UUID.generate(),
-      conversation_id: Ecto.UUID.generate(),
-      user_id: Ecto.UUID.generate(),
-      conversation_type: :direct,
-      provider_id: Ecto.UUID.generate(),
-      program_id: nil,
-      subject: nil,
-      other_participant_name: "Other User",
-      participant_count: 2,
-      latest_message_content: "Hello",
-      latest_message_sender_id: nil,
-      latest_message_at: nil,
-      unread_count: 0,
-      last_read_at: nil,
-      archived_at: nil,
-      inserted_at: now,
-      updated_at: now
-    }
+    insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
 
-    merged = Map.merge(defaults, attrs)
+    insert(:message_schema,
+      conversation_id: conversation.id,
+      sender_id: sender.id,
+      content: content,
+      inserted_at:
+        DateTime.utc_now()
+        |> DateTime.add(-Keyword.get(opts, :seconds_ago, 60), :second)
+        |> DateTime.truncate(:second)
+    )
 
-    %ConversationSummary{}
-    |> Ecto.Changeset.change(merged)
-    |> Repo.insert!()
+    conversation
   end
 end

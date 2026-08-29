@@ -32,7 +32,7 @@ defmodule KlassHero.Messaging.MarkAsReadTest do
         user_id: user.id
       )
 
-      read_at = ~U[2025-01-15 12:00:00Z]
+      read_at = ~U[2025-01-15 12:00:00.000000Z]
 
       assert {:ok, participant} = MarkAsRead.execute(conversation.id, user.id, read_at)
       assert participant.last_read_at == read_at
@@ -48,9 +48,9 @@ defmodule KlassHero.Messaging.MarkAsReadTest do
       )
 
       # Truncate to second since utc_datetime fields don't have microsecond precision
-      before = DateTime.utc_now() |> DateTime.truncate(:second)
+      before = DateTime.utc_now()
       {:ok, participant} = MarkAsRead.execute(conversation.id, user.id)
-      after_time = DateTime.utc_now() |> DateTime.truncate(:second)
+      after_time = DateTime.utc_now()
 
       assert DateTime.compare(participant.last_read_at, before) in [:gt, :eq]
       assert DateTime.compare(participant.last_read_at, after_time) in [:lt, :eq]
@@ -75,7 +75,7 @@ defmodule KlassHero.Messaging.MarkAsReadTest do
         last_read_at: old_read_at
       )
 
-      new_read_at = ~U[2025-01-15 12:00:00Z]
+      new_read_at = ~U[2025-01-15 12:00:00.000000Z]
 
       assert {:ok, participant} = MarkAsRead.execute(conversation.id, user.id, new_read_at)
       assert participant.last_read_at == new_read_at

@@ -204,7 +204,7 @@ expensive one. Two of the three kinds below need no projection at all.
 - **Queries go in the context module or a context-root submodule** (`provider/programs.ex`, `provider/assignments.ex`) — never behind a per-table repository wrapper. A read-only module that just wraps `where`/`order_by`/`Repo.all` is indirection without a payer.
 - No mappers, and no separate DTO twinned with a projection schema. If you are writing a `to_dto/1`, the two modules should be one.
 - Build a projection — once justified — on `KlassHero.Shared.Projection` (base macro); optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). Declare `:topics` in `use Projection, ...` and implement `bootstrap_impl/0` and `handle_event/2`.
-- Canonical example: `provider/projections/provider_session_details.ex` with its read table `provider/session_detail.ex`. It is the one that earns its place — a six-table join across three contexts with two LATERALs, and genuinely incremental attendance counters. Provider and Messaging are the only contexts with a projection left.
+- Canonical example: `provider/projections/provider_session_details.ex` with its read table `provider/session_detail.ex`. It is the one that earns its place — a six-table join across three contexts with two LATERALs, and genuinely incremental attendance counters. It is also the only projection left anywhere: `conversation_summaries` was retired once the inbox, the unread badge and conversation titling all read the write model live.
 
 ## Domain Modeling Idioms
 

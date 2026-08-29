@@ -12,10 +12,9 @@ defmodule KlassHero.Messaging.GetMonitoredConversation do
   and past the gate an admin is entitled to know whether a conversation exists anyway.
 
   **There is no `:mark_as_read` option.** `GetConversation.execute/3` has one, so it
-  can be passed by mistake. `Participant.last_read_at` feeds three independent unread
-  counters — `ConversationSummary.unread_count` behind the nav badge,
-  `ConversationQueries.total_unread_count/1`, and the `ConversationSummaries`
-  projection — so an admin viewing a thread must never touch it. Omitting the option
+  can be passed by mistake. `Participant.last_read_at` is the sole input to every
+  unread count in the system — the nav badge and each card badge both read it live
+  (ADR-0023) — so an admin viewing a thread must never touch it. Omitting the option
   makes that unexpressible rather than merely unused.
   """
 

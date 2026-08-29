@@ -2,10 +2,10 @@ defmodule KlassHeroWeb.Flows.MessagingBroadcastTest do
   @moduledoc """
   Flow tests for program broadcasts and the private replies they invite.
 
-  Migrated from `test/e2e/messaging/broadcast_test.exs`. Both hops now travel the
-  real delivery path: `conversation_created` and `message_sent` reach
-  `{ConversationSummaries, :project}`, so the parent's list is a projected read
-  rather than a rebuilt one.
+  Migrated from `test/e2e/messaging/broadcast_test.exs`, which rebuilt a projection
+  before reading. The parent's list is now a live query over the write model
+  (ADR-0023), so what these assert is the seating itself: a participant row and the
+  read cursor stamped at it, which is what decides whether history arrives badged.
   """
 
   use KlassHeroWeb.FlowCase, async: false

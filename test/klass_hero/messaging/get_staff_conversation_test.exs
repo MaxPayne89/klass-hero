@@ -121,7 +121,7 @@ defmodule KlassHero.Messaging.GetStaffConversationTest do
       # still catch a mark-as-read — a DateTime is not nil — but nothing else: code
       # that *cleared* an existing receipt would compare `[nil, nil] == [nil, nil]`
       # and pass. A non-nil value pins the state in both directions.
-      read_at = ~U[2026-01-01 09:00:00Z]
+      read_at = ~U[2026-01-01 09:00:00.000000Z]
 
       {1, _} =
         Repo.update_all(

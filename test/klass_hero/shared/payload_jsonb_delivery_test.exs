@@ -40,8 +40,10 @@ defmodule KlassHero.Shared.PayloadJsonbDeliveryTest do
   }
 
   test "a payload comes back out of oban_jobs.args as what the producer put in" do
-    # A real topic, so Outbox.stage/2 does not drop the event for want of a consumer.
-    event = Event.new(:conversation_created, :messaging, :conversation, Ecto.UUID.generate(), @payload)
+    # A topic with a live consumer, so Outbox.stage/2 does not drop the event. This test
+    # borrows one; if the last consumer of :message_sent ever goes, pick another rather
+    # than wondering why three assertions started reading an empty args map.
+    event = Event.new(:message_sent, :messaging, :conversation, Ecto.UUID.generate(), @payload)
 
     args = stage_and_read_args(event)
 
@@ -49,7 +51,7 @@ defmodule KlassHero.Shared.PayloadJsonbDeliveryTest do
   end
 
   test "the stored payload is still plain JSON, with the types beside it" do
-    event = Event.new(:conversation_created, :messaging, :conversation, Ecto.UUID.generate(), @payload)
+    event = Event.new(:message_sent, :messaging, :conversation, Ecto.UUID.generate(), @payload)
 
     args = stage_and_read_args(event)
 
@@ -71,7 +73,7 @@ defmodule KlassHero.Shared.PayloadJsonbDeliveryTest do
   # observable end to end. #1358 retired both keys; asserting it here rather than only
   # against `serialize/1` is what would catch a producer path that reintroduced either.
   test "the stored envelope carries no metadata or version" do
-    event = Event.new(:conversation_created, :messaging, :conversation, Ecto.UUID.generate(), @payload)
+    event = Event.new(:message_sent, :messaging, :conversation, Ecto.UUID.generate(), @payload)
 
     keys = event |> stage_and_read_args() |> Map.keys()
 

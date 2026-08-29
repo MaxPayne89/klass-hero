@@ -28,7 +28,7 @@ defmodule KlassHero.Messaging.ParticipantTest do
     end
 
     test "casts last_read_at" do
-      read_at = ~U[2025-01-15 12:00:00Z]
+      read_at = ~U[2025-01-15 12:00:00.000000Z]
       changeset = Participant.mark_read_changeset(%Participant{}, %{last_read_at: read_at})
       assert changeset.valid?
       assert Changeset.get_change(changeset, :last_read_at) == read_at
@@ -60,24 +60,24 @@ defmodule KlassHero.Messaging.ParticipantTest do
     end
 
     test "true when last_read_at is nil but messages exist" do
-      assert Participant.has_unread?(build_participant(), ~U[2025-01-15 12:00:00Z])
+      assert Participant.has_unread?(build_participant(), ~U[2025-01-15 12:00:00.000000Z])
     end
 
     test "true when latest message is after last_read_at" do
       participant = %{build_participant() | last_read_at: ~U[2025-01-15 10:00:00Z]}
-      assert Participant.has_unread?(participant, ~U[2025-01-15 12:00:00Z])
+      assert Participant.has_unread?(participant, ~U[2025-01-15 12:00:00.000000Z])
     end
 
     test "false when latest message is before or equal to last_read_at" do
       participant = %{build_participant() | last_read_at: ~U[2025-01-15 14:00:00Z]}
-      refute Participant.has_unread?(participant, ~U[2025-01-15 12:00:00Z])
+      refute Participant.has_unread?(participant, ~U[2025-01-15 12:00:00.000000Z])
 
-      at = ~U[2025-01-15 12:00:00Z]
+      at = ~U[2025-01-15 12:00:00.000000Z]
       refute Participant.has_unread?(%{participant | last_read_at: at}, at)
     end
 
     test "false when last_read_at is set but no messages" do
-      participant = %{build_participant() | last_read_at: ~U[2025-01-15 12:00:00Z]}
+      participant = %{build_participant() | last_read_at: ~U[2025-01-15 12:00:00.000000Z]}
       refute Participant.has_unread?(participant, nil)
     end
   end

@@ -1,16 +1,33 @@
 defmodule KlassHeroWeb.MessagingComponentsTest do
   use KlassHeroWeb.ConnCase, async: true
 
-  import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Messaging.InboxConversation
   alias KlassHero.Messaging.StaffConversation
   alias KlassHeroWeb.MessagingComponents
+
+  # The card is duck-typed over field names — `InboxConversation` for the parent and
+  # provider inboxes, `StaffConversation` for the staff one — so it is rendered against
+  # the real struct rather than a stand-in for a read table that no longer exists.
+  defp inbox_conversation(attrs) do
+    struct!(
+      %InboxConversation{
+        conversation_id: Ecto.UUID.generate(),
+        conversation_type: :direct,
+        provider_id: Ecto.UUID.generate(),
+        other_participant_name: "Other User",
+        latest_message_content: "Hello",
+        latest_message_at: DateTime.utc_now()
+      },
+      attrs
+    )
+  end
 
   defp render_card(summary_attrs, opts \\ []) do
     render_component(&MessagingComponents.conversation_card/1, %{
       id: "conv-test",
-      summary: build(:conversation_summary_schema, summary_attrs),
+      summary: inbox_conversation(summary_attrs),
       user_type: Keyword.get(opts, :user_type, :parent),
       navigate: "/messages/conv-1"
     })
@@ -171,9 +188,9 @@ defmodule KlassHeroWeb.MessagingComponentsTest do
              |> Enum.empty?()
     end
 
-    # A ConversationSummary has no such field at all — the card must omit the line
+    # `InboxConversation` has no such field at all — the card must omit the line
     # rather than raise, which is exactly what makes the shared-card reuse safe.
-    test "omits the attribution for a summary row that has no such field" do
+    test "omits the attribution for a row that has no such field" do
       assert render_card([], user_type: :provider)
              |> LazyHTML.from_fragment()
              |> LazyHTML.query(~s([data-role="staff-attribution"]))

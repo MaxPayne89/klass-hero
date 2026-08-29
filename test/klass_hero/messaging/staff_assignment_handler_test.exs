@@ -45,7 +45,11 @@ defmodule KlassHero.Messaging.StaffAssignmentHandlerTest do
       assert KlassHero.Messaging.participant?(conversation.id, staff_user_id)
     end
 
-    test "emits :participant_added per back-filled conversation with source :later_assignment" do
+    # Was an assertion on the :participant_added events this emits. Nothing consumes
+    # that topic since ADR-0023 retired `ConversationSummaries`, so `Outbox.stage/2`
+    # drops it and the assertion could only ever fail. The fan-out it was really
+    # covering — every eligible conversation, not just the first — is asserted directly.
+    test "back-fills the staff member into every active program conversation" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
       parent_user = KlassHero.AccountsFixtures.user_fixture()
@@ -71,20 +75,8 @@ defmodule KlassHero.Messaging.StaffAssignmentHandlerTest do
       event = build_assignment_event(provider.id, program.id, staff_user.id)
       assert :ok = StaffAssignmentHandler.handle_event(event)
 
-      events =
-        Enum.filter(
-          get_published_integration_events(),
-          &(&1.event_type == :participant_added)
-        )
-
-      assert length(events) == 2
-      conv_ids = events |> Enum.map(& &1.entity_id) |> Enum.sort()
-      assert conv_ids == Enum.sort([conv_a.id, conv_b.id])
-
-      assert Enum.all?(events, fn e ->
-               e.payload.participant_user_ids == [staff_user.id] and
-                 e.payload.source == :later_assignment
-             end)
+      assert KlassHero.Messaging.participant?(conv_a.id, staff_user.id)
+      assert KlassHero.Messaging.participant?(conv_b.id, staff_user.id)
     end
 
     # Same rule as the parent back-fill (#381): arriving mid-programme should not
@@ -179,19 +171,6 @@ defmodule KlassHero.Messaging.StaffAssignmentHandlerTest do
 
       refute KlassHero.Messaging.participant?(conv_a.id, staff_user.id)
       refute KlassHero.Messaging.participant?(conv_b.id, staff_user.id)
-
-      events =
-        Enum.filter(
-          get_published_integration_events(),
-          &(&1.event_type == :participant_removed)
-        )
-
-      assert length(events) == 2
-
-      assert Enum.all?(events, fn e ->
-               e.payload.participant_user_ids == [staff_user.id] and
-                 e.payload.source == :staff_unassignment
-             end)
     end
   end
 
@@ -212,13 +191,6 @@ defmodule KlassHero.Messaging.StaffAssignmentHandlerTest do
       assert :ok = StaffAssignmentHandler.handle_event(event)
 
       assert KlassHero.Messaging.participant?(conversation.id, substitute.id)
-
-      assert [participant_added] =
-               Enum.filter(get_published_integration_events(), &(&1.event_type == :participant_added))
-
-      assert participant_added.entity_id == conversation.id
-      assert participant_added.payload.participant_user_ids == [substitute.id]
-      assert participant_added.payload.source == :later_assignment
     end
   end
 

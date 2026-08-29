@@ -6,8 +6,10 @@ defmodule KlassHero.Messaging.StaffAssignmentHandler do
   On assignment, adds the staff user as a participant to every active program
   conversation where they are not already an active participant. The participant
   inserts and one `:participant_added` event per back-filled conversation are
-  staged inside a single transaction, so the delivery job reaches the
-  `ConversationSummaries` projection only after the rows it describes commit.
+  staged inside a single transaction, so the delivery job reaches a consumer only
+  after the rows it describes commit. No consumer is registered for
+  `:participant_added` today, so `Outbox.stage/2` drops it (ADR-0023); the staging
+  discipline is what makes re-adding one safe.
 
   On unassignment, delegates to `RemoveAssignedStaff` to soft-leave the staff in
   every active program conversation; the returned `:participant_removed` events
