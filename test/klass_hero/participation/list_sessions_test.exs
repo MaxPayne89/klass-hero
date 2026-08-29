@@ -135,25 +135,25 @@ defmodule KlassHero.Participation.ListSessionsTest do
     end
 
     test "defaults to today when no date filter provided" do
-      results = KlassHero.Participation.list_admin_sessions(%{})
+      results = KlassHero.Participation.list_session_summaries(%{})
       assert length(results) == 1
       assert hd(results).program_name == "Test Program"
     end
 
     test "uses provided date filter instead of default" do
       yesterday = Date.add(Date.utc_today(), -1)
-      results = KlassHero.Participation.list_admin_sessions(%{date: yesterday})
+      results = KlassHero.Participation.list_session_summaries(%{date: yesterday})
       assert results == []
     end
 
     test "passes through provider_id filter" do
       other_provider = insert(:provider_profile_schema)
-      results = KlassHero.Participation.list_admin_sessions(%{provider_id: other_provider.id})
+      results = KlassHero.Participation.list_session_summaries(%{provider_id: other_provider.id})
       assert results == []
     end
 
     test "enriches rows with provider_name from the Provider facade", %{provider: provider} do
-      [row] = KlassHero.Participation.list_admin_sessions(%{})
+      [row] = KlassHero.Participation.list_session_summaries(%{})
       assert row.provider_name == provider.business_name
     end
 
@@ -175,9 +175,75 @@ defmodule KlassHero.Participation.ListSessionsTest do
         check_out_at: DateTime.utc_now()
       )
 
-      row = Enum.find(KlassHero.Participation.list_admin_sessions(%{}), &(&1.id == session.id))
+      row = Enum.find(KlassHero.Participation.list_session_summaries(%{}), &(&1.id == session.id))
       assert row.total_count == 3
       assert row.checked_in_count == 2
+    end
+
+    # The Schedule calendar needs both: max_capacity to ask
+    # `ProgramSession.occupancy/2`, which matches on that key and raises without
+    # it, and location to label a cell.
+    test "carries location and max_capacity for the calendar", %{program: program} do
+      session =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          start_time: ~T[07:00:00],
+          location: "Gym A",
+          max_capacity: 12
+        )
+
+      row = Enum.find(KlassHero.Participation.list_session_summaries(%{}), &(&1.id == session.id))
+
+      assert row.location == "Gym A"
+      assert row.max_capacity == 12
+      assert ProgramSession.occupancy(row, 13) == :over
+    end
+
+    test "returns every day in a range, not just one" do
+      program = insert(:program_schema, provider_id: insert(:provider_profile_schema).id)
+      today = Date.utc_today()
+
+      for offset <- [0, 3, 6] do
+        insert(:program_session_schema, program_id: program.id, session_date: Date.add(today, offset))
+      end
+
+      results =
+        KlassHero.Participation.list_session_summaries(%{
+          program_id: program.id,
+          date_from: today,
+          date_to: Date.add(today, 6)
+        })
+
+      assert length(results) == 3
+    end
+
+    # A span nobody can mean is a runaway query, not a filter. It raises rather
+    # than clamping: silently dropping rows would hide sessions on a calendar,
+    # which is worse than failing. The bound is generous rather than the
+    # calendar's six weeks because Admin's range comes from URL params and a
+    # year-long filter there is legitimate.
+    test "refuses a span no caller can mean" do
+      today = Date.utc_today()
+
+      assert_raise ArgumentError, ~r/366/, fn ->
+        KlassHero.Participation.list_session_summaries(%{
+          date_from: today,
+          date_to: Date.add(today, 400)
+        })
+      end
+    end
+
+    test "allows a year-long span, which Admin can legitimately ask for" do
+      today = Date.utc_today()
+
+      assert [row] =
+               KlassHero.Participation.list_session_summaries(%{
+                 date_from: today,
+                 date_to: Date.add(today, 364)
+               })
+
+      assert row.program_name == "Test Program"
     end
   end
 end

@@ -48,8 +48,13 @@ defmodule KlassHero.Participation do
   @doc "Lists upcoming sessions across several programs from `from_date`."
   defdelegate list_upcoming_sessions_for_programs(program_ids, from_date), to: Sessions
 
-  @doc "Lists sessions for the admin surface, with filters and resolved names."
-  defdelegate list_admin_sessions(filters \\ %{}), to: Sessions
+  @doc """
+  Lists sessions with their attendance tally, for the admin table and the
+  provider Schedule calendar. Raises on an absurd date range — see
+  `KlassHero.Participation.Sessions.list_session_summaries/1`.
+  """
+  @spec list_session_summaries(map()) :: [Sessions.session_summary()]
+  defdelegate list_session_summaries(filters \\ %{}), to: Sessions
 
   @doc "Lists a provider's sessions, optionally for one date."
   defdelegate list_provider_sessions(provider_id, date \\ nil), to: Sessions

@@ -179,7 +179,7 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
 
   defp load_sessions(socket) do
     filters = build_filters(socket.assigns)
-    sessions = Participation.list_admin_sessions(filters)
+    sessions = Participation.list_session_summaries(filters)
     stream(socket, :sessions, sessions, reset: true)
   end
 

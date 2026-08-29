@@ -260,8 +260,47 @@ defmodule KlassHero.Participation.Sessions do
     |> Repo.all()
   end
 
-  @doc "Lists sessions with enriched data for the admin dashboard."
-  def list_admin_sessions(filters \\ %{}) when is_map(filters) do
+  @typedoc """
+  One row of `list_session_summaries/1` — a session plus its attendance tally and
+  the names resolved from the contexts that own them.
+  """
+  @type session_summary :: %{
+          id: String.t(),
+          program_id: String.t(),
+          session_date: Date.t(),
+          start_time: Time.t(),
+          end_time: Time.t(),
+          status: atom(),
+          location: String.t() | nil,
+          max_capacity: pos_integer() | nil,
+          checked_in_count: non_neg_integer(),
+          total_count: non_neg_integer(),
+          program_name: String.t() | nil,
+          provider_name: String.t() | nil
+        }
+
+  # A span past this is a runaway query, not a filter. Deliberately far above the
+  # six weeks a month grid asks for: Admin's range arrives from URL params, and a
+  # year-long filter there is a real thing to want.
+  @max_session_span_days 366
+
+  @doc """
+  Lists sessions with their attendance tally, for the admin table and the
+  provider Schedule calendar.
+
+  Accepts `:provider_id`, `:program_id`, `:status`, and either `:date` for one
+  day or `:date_from`/`:date_to` for a range — pass one or the other, never both,
+  since the two filters are ANDed. With no date filter at all this defaults to
+  today rather than loading every session ever scheduled.
+
+  Raises `ArgumentError` on a range wider than #{@max_session_span_days} days.
+  It raises rather than clamping because a truncated range hides sessions, and a
+  calendar that quietly omits a day is worse than one that fails to load.
+  """
+  @spec list_session_summaries(map()) :: [session_summary()]
+  def list_session_summaries(filters \\ %{}) when is_map(filters) do
+    validate_span!(filters)
+
     # Default to today when no date filter is provided to avoid loading all sessions.
     filters =
       if not Map.has_key?(filters, :date) and
@@ -276,6 +315,17 @@ defmodule KlassHero.Participation.Sessions do
     |> aggregate_admin_sessions()
     |> enrich_session_names()
   end
+
+  defp validate_span!(%{date_from: %Date{} = from, date_to: %Date{} = to}) do
+    span = Date.diff(to, from) + 1
+
+    if span > @max_session_span_days do
+      raise ArgumentError,
+            "session range spans #{span} days, more than the #{@max_session_span_days} allowed"
+    end
+  end
+
+  defp validate_span!(_filters), do: :ok
 
   @doc "Lists sessions for a provider on a specific date (defaults to today)."
   def list_provider_sessions(provider_id, date \\ nil) when is_binary(provider_id) do
@@ -341,6 +391,10 @@ defmodule KlassHero.Participation.Sessions do
       start_time: s.start_time,
       end_time: s.end_time,
       status: s.status,
+      location: s.location,
+      # The Schedule calendar asks `ProgramSession.occupancy/2` about these rows,
+      # and that function matches on :max_capacity — without it here it raises.
+      max_capacity: s.max_capacity,
       checked_in_count:
         count(fragment("CASE WHEN ? = ANY(?) THEN 1 END", pr.status, ^ParticipationRecord.checked_in_statuses())),
       total_count: count(pr.id)
