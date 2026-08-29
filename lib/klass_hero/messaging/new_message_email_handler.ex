@@ -70,9 +70,15 @@ defmodule KlassHero.Messaging.NewMessageEmailHandler do
   # nothing new and is what turns a busy thread into a mute.
   #
   # The `is_nil(last_read_at) or inserted_at > last_read_at` half is the same
-  # "has this participant caught up" rule as `ConversationQueries.total_unread_count/1`
-  # and `MessageQueries.count_unread/2` — three expressions of one rule, which is
-  # why a change to any of them has to visit the others. See #1531.
+  # "has this participant caught up" rule as `MessageQueries.count_unread/2`.
+  #
+  # The unread *counters* no longer belong to that set. Retiring the projection
+  # (ADR-0023) gave `ConversationQueries.total_unread_count/1` an
+  # `m.sender_id != ^user_id` filter, restoring what the projection had done all
+  # along and the dead live query had not. This query has no equivalent, so a
+  # recipient's own earlier message still reads as outstanding mail and suppresses
+  # the email; `count_unread/2` takes no user id and structurally cannot have one.
+  # #1531 is where that gets settled.
   defp caught_up_user_ids(conversation_id, message_id) do
     from(p in Participant,
       where: p.conversation_id == ^conversation_id and is_nil(p.left_at),

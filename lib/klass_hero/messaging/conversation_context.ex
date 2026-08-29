@@ -27,6 +27,18 @@ defmodule KlassHero.Messaging.ConversationContext do
   the input — every conversation gets an entry, empty where nothing applies — so
   `Map.fetch!/2` is safe.
 
+  ## Why the roster is read directly
+
+  `fetch_child_names/2` queries Enrollment's tables rather than calling its facade,
+  on ADR-0015's "a query no facade expresses" ground. It needs child *names* keyed by
+  `{program_id, parent identity}` for a whole page at once; Enrollment's nearest
+  functions, `list_enrolled_child_ids/1` and `list_enrolled_identity_ids/1`, are
+  single-program and return ids.
+
+  The `acl_span` keeps the hop visible in traces and `mix lint_acl_boundary` enforces
+  that it is there. It cannot check the sentence above it, which is why the sentence
+  is written down.
+
   ## Who sees a name
 
   Only a principal of the thread, or someone currently seated in it. A provider owner
