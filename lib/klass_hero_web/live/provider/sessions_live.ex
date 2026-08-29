@@ -6,11 +6,9 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Provider.ReadModels.SessionStaffing
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
   alias KlassHeroWeb.Helpers.SessionFormHandlers
   alias KlassHeroWeb.Helpers.TaskHelpers
-  alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
 
@@ -55,7 +53,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       |> assign(:program_names, program_names(provider_programs))
       |> assign(:business, business)
       |> assign(:form, nil)
-      |> assign(:session_staffing_modal, nil)
       |> stream(:sessions, [])
 
     if connected?(socket) do
@@ -115,6 +112,9 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     end
   end
 
+  # Kept here alongside the session page's own Start (#1501) until this page is
+  # retired. A list renders one button per row, so it has to send the id; the
+  # context gate is what makes that safe either way (ADR-0017).
   @impl true
   def handle_event("start_session", %{"session_id" => session_id}, socket) do
     case Participation.start_session(socket.assigns.current_scope, session_id) do
@@ -191,134 +191,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     {:noreply, push_patch(socket, to: ~p"/provider/sessions")}
   end
 
-  # --- Session staffing panel (#782) ---------------------------------------
-  #
-  # `session_id` arrives from the client, so every entry point goes through the
-  # scoped read; foreign and unknown are indistinguishable, leaking no oracle.
-
-  @impl true
-  def handle_event("manage_session_staffing", %{"id" => session_id}, socket) do
-    case build_session_staffing_modal(session_id, socket) do
-      {:ok, modal} ->
-        {:noreply, assign(socket, :session_staffing_modal, modal)}
-
-      {:error, :not_found} ->
-        {:noreply, session_staffing_not_found(socket, "open", session_id)}
-    end
-  end
-
-  @impl true
-  def handle_event("close_session_staffing", _params, socket) do
-    {:noreply, assign(socket, :session_staffing_modal, nil)}
-  end
-
-  @impl true
-  def handle_event("assign_session_staff", %{"add_staff" => %{"staff_id" => ""}}, socket) do
-    {:noreply, put_flash(socket, :error, gettext("Pick a staff member to add."))}
-  end
-
-  def handle_event("assign_session_staff", %{"add_staff" => %{"staff_id" => staff_member_id}}, socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
-
-    %{
-      provider_id: socket.assigns.provider_id,
-      session_id: session_id,
-      staff_member_id: staff_member_id,
-      assigned_by_user_id: socket.assigns.current_scope.user.id
-    }
-    |> Provider.assign_staff_to_session()
-    |> case do
-      {:ok, _assignment} ->
-        {:noreply,
-         socket
-         |> refresh_session_staffing()
-         |> put_flash(:info, gettext("Staff member added to this session."))}
-
-      # The picker excludes them, so this is a stale panel (two tabs, back button)
-      # rather than user error — re-read so the list stops offering them.
-      {:error, :already_assigned} ->
-        {:noreply,
-         socket
-         |> refresh_session_staffing()
-         |> put_flash(:error, gettext("They are already working this session."))}
-
-      {:error, :not_found} ->
-        {:noreply, session_staffing_not_found(socket, "assign", staff_member_id)}
-    end
-  end
-
-  @impl true
-  def handle_event("remove_session_staff", %{"staff-id" => staff_member_id}, socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
-
-    case Provider.unassign_staff_from_session(session_id, staff_member_id, socket.assigns.provider_id) do
-      {:ok, _assignment} ->
-        {:noreply,
-         socket
-         |> refresh_session_staffing()
-         |> put_flash(:info, gettext("Staff member removed from this session."))}
-
-      {:error, :cannot_unassign_lead} ->
-        {:noreply,
-         socket
-         |> refresh_session_staffing()
-         |> put_flash(
-           :error,
-           gettext("This person leads the session. Make someone else lead before removing them.")
-         )}
-
-      # The button is disabled for this case, so reaching it means a stale panel —
-      # re-read so the disabled state catches up with what the context enforced.
-      {:error, :cannot_empty_session} ->
-        {:noreply,
-         socket
-         |> refresh_session_staffing()
-         |> put_flash(
-           :error,
-           gettext(
-             "A session needs at least one person. Use “Go back to the program's usual team” to drop this session's own roster."
-           )
-         )}
-
-      # Already gone — a benign double-click or a second tab, not an error worth a
-      # red flash. Re-read so the row disappears.
-      {:error, :not_found} ->
-        {:noreply, refresh_session_staffing(socket)}
-    end
-  end
-
-  @impl true
-  def handle_event("promote_session_lead", %{"staff-id" => staff_member_id}, socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
-
-    case Provider.set_session_lead_instructor(session_id, staff_member_id, socket.assigns.provider_id) do
-      {:ok, _assignment} ->
-        {:noreply,
-         socket
-         |> refresh_session_staffing()
-         |> put_flash(:info, gettext("Lead instructor for this session updated."))}
-
-      {:error, :not_found} ->
-        {:noreply, session_staffing_not_found(socket, "promote", staff_member_id)}
-    end
-  end
-
-  @impl true
-  def handle_event("revert_session_staffing", _params, socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
-
-    case Provider.revert_session_to_program_roster(session_id, socket.assigns.provider_id) do
-      {:ok, _count} ->
-        {:noreply,
-         socket
-         |> refresh_session_staffing()
-         |> put_flash(:info, gettext("This session is back on the program's usual team."))}
-
-      {:error, :not_found} ->
-        {:noreply, session_staffing_not_found(socket, "revert", session_id)}
-    end
-  end
-
   @impl true
   def handle_info({:session_changed, session_id}, socket) do
     {:noreply, update_session_in_stream(socket, session_id)}
@@ -356,76 +228,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   def handle_info(_message, socket), do: {:noreply, socket}
 
   defp program_names(programs), do: Map.new(programs, &{&1.id, &1.title})
-
-  # Two scoped facade reads joined by a presenter. `get_session_staffing_for_provider/2`
-  # is the IDOR guard *and* the source of the override-vs-program fact the panel
-  # renders — one call answers "may they see this?" and "where did this roster come
-  # from?".
-  defp build_session_staffing_modal(session_id, socket) do
-    provider_id = socket.assigns.provider_id
-
-    with {:ok, staffing} <- Provider.get_session_staffing_for_provider(provider_id, session_id) do
-      lead_id = staffing.lead && staffing.lead.id
-
-      members =
-        session_id
-        |> Provider.list_session_staff()
-        |> ProgramStaffingPresenter.for_panel(lead_id)
-
-      assignable =
-        provider_id
-        |> Provider.list_assignable_staff_for_session(session_id)
-        |> staff_to_options()
-
-      {:ok,
-       %{
-         session_id: session_id,
-         session_label: session_label(session_id),
-         program_title: Map.get(socket.assigns.program_names, staffing.program_id, gettext("Program")),
-         overridden?: SessionStaffing.overridden?(staffing),
-         members: members,
-         assignable_options: assignable,
-         # Rebuilt on every re-read, so the picker resets to its prompt after a
-         # successful add instead of still naming the person now on the roster.
-         add_form: to_form(%{"staff_id" => ""}, as: :add_staff)
-       }}
-    end
-  end
-
-  # Every mutation re-reads rather than patching the assign in place: the context
-  # owns who works the session and whether that roster is its own.
-  defp refresh_session_staffing(socket) do
-    %{session_id: session_id} = socket.assigns.session_staffing_modal
-
-    case build_session_staffing_modal(session_id, socket) do
-      {:ok, modal} -> assign(socket, :session_staffing_modal, modal)
-      {:error, :not_found} -> assign(socket, :session_staffing_modal, nil)
-    end
-  end
-
-  # Read rather than pulled off the stream: a stream is not enumerable state to
-  # search, and the panel can be reopened after a reset has cleared the entry.
-  defp session_label(session_id) do
-    case Participation.get_session(session_id) do
-      {:ok, session} -> Calendar.strftime(session.session_date, "%a, %d %b")
-      {:error, :not_found} -> gettext("Session")
-    end
-  end
-
-  defp staff_to_options(members) do
-    Enum.map(members, fn m -> {Provider.staff_member_full_name(m), m.id} end)
-  end
-
-  defp session_staffing_not_found(socket, action, subject_id) do
-    Logger.warning("[SessionsLive] Session staffing #{action} for unknown or foreign target",
-      session_id: subject_id,
-      provider_id: socket.assigns.provider_id
-    )
-
-    socket
-    |> assign(:session_staffing_modal, nil)
-    |> put_flash(:error, gettext("That session could not be found."))
-  end
 
   defp load_sessions(socket) do
     result =

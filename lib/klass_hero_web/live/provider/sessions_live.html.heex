@@ -79,23 +79,6 @@
             <% true -> %>
               <span class="text-sm text-gray-500">{gettext("No actions available")}</span>
           <% end %>
-
-          <%!-- Staffing is editable on any session, including a completed one:
-                correcting who actually worked a past date is a real need. --%>
-          <button
-            id={"manage-session-staffing-#{session.id}"}
-            phx-click="manage_session_staffing"
-            phx-value-id={session.id}
-            class={[
-              "px-4 py-2 bg-white text-hero-black-100 font-medium border border-hero-grey-300",
-              "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
-              Theme.rounded(:lg),
-              Theme.transition(:normal)
-            ]}
-          >
-            <.icon name="hero-users" class="w-4 h-4 mr-1 inline" />
-            {gettext("Staffing")}
-          </button>
         </:actions>
       </.participation_card>
     </div>
@@ -119,8 +102,6 @@
       </div>
     </div>
   </div>
-
-  <.session_staffing_modal :if={@session_staffing_modal} modal={@session_staffing_modal} />
 
   <%= if @live_action == :new do %>
     <div

@@ -25,6 +25,14 @@
       >
         <:actions>
           <.kh_button
+            :if={@session.status == :scheduled}
+            id="start-session-btn"
+            variant={:dark}
+            phx-click="start_session"
+          >
+            {gettext("Start Session")}
+          </.kh_button>
+          <.kh_button
             :if={@session.status == :in_progress}
             id="complete-session-btn"
             variant={:dark}
@@ -39,6 +47,13 @@
             phx-click="edit_session"
           >
             {gettext("Edit Session")}
+          </.kh_button>
+          <.kh_button
+            id="manage-session-staffing-btn"
+            variant={:secondary}
+            phx-click="manage_session_staffing"
+          >
+            {gettext("Staffing")}
           </.kh_button>
         </:actions>
       </.participation_card>
@@ -58,6 +73,8 @@
         cancel_event="cancel_edit_session"
       />
     </div>
+
+    <.session_staffing_modal :if={@session_staffing_modal} modal={@session_staffing_modal} />
 
     <div class="mt-6">
       <h2 class="text-xl font-semibold text-gray-900 mb-4">

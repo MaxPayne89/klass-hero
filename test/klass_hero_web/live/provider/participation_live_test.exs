@@ -13,9 +13,13 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
   setup :register_and_log_in_provider
 
-  defp create_session_with_child(%{provider: provider, user: user}) do
+  defp create_session_with_child(context), do: create_session_with_child(context, "in_progress")
+
+  defp create_scheduled_session_with_child(context), do: create_session_with_child(context, "scheduled")
+
+  defp create_session_with_child(%{provider: provider, user: user}, status) do
     program = insert(:program_schema, provider_id: provider.id)
-    session = insert(:program_session_schema, program_id: program.id, status: "in_progress")
+    session = insert(:program_session_schema, program_id: program.id, status: status)
     parent = insert(:parent_profile_schema)
 
     {child, _parent} =
@@ -1012,6 +1016,144 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       refute has_element?(view, "#absence-form-#{record.id}")
       assert KlassHero.Repo.get!(ParticipationRecord, record.id).status == :registered
+    end
+  end
+
+  # Start moved here from My Sessions (#1501). The detail page reads the session id
+  # from a mount-time assign rather than a client-sent phx-value, which is the rule
+  # ParticipationLiveHandlers.complete_session/2 already states for this surface.
+  describe "starting the session" do
+    setup [:create_scheduled_session_with_child]
+
+    test "offers Start on a scheduled session", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      assert has_element?(view, "#start-session-btn")
+    end
+
+    # The page must reflect the transition, not merely perform it. SessionsLive got
+    # its refresh from the {:session_changed, id} broadcast, which this LiveView's
+    # catch-all handle_info swallows -- so asserting only the DB row would pass on a
+    # page that silently still offers Start.
+    test "starting it advances the session and re-renders the page", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      view |> element("#start-session-btn") |> render_click()
+
+      assert Repo.get!(ProgramSession, session.id).status == :in_progress
+      refute has_element?(view, "#start-session-btn")
+      assert has_element?(view, "#complete-session-btn")
+    end
+  end
+
+  # Per-session staffing (#782/#1413) moved here from My Sessions (#1501). Unlike the
+  # list, this page opens the panel without a client-sent session id -- it shows one
+  # session and already holds its id.
+  describe "session staffing" do
+    setup [:create_scheduled_session_with_child]
+
+    setup %{provider: provider, session: session} do
+      regular = insert(:staff_member_schema, provider_id: provider.id, first_name: "Ana", last_name: "Stone")
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_program(%{
+          provider_id: provider.id,
+          program_id: session.program_id,
+          staff_member_id: regular.id
+        })
+
+      %{regular: regular}
+    end
+
+    test "opens showing the program's roster and says it is inherited", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      assert has_element?(view, "#session-staffing-modal")
+      assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      # Nothing to revert to while the roster is still the program's.
+      refute has_element?(view, "#session-staffing-revert-btn")
+    end
+
+    test "adding someone keeps the program's roster and appends to it", ctx do
+      substitute = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Bea", last_name: "Stone")
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      view
+      |> element("#session-staffing-add-form")
+      |> render_submit(%{"add_staff" => %{"staff_id" => substitute.id}})
+
+      # Both, not one: "Add" adds. The session takes its own roster, but it takes
+      # the program's team with it rather than discarding them.
+      assert has_element?(view, "#session-staffing-member-#{substitute.id}")
+      assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      assert has_element?(view, "#session-staffing-revert-btn")
+    end
+
+    test "removing works on an inherited roster and leaves the rest", ctx do
+      other = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Cal", last_name: "Stone")
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_program(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.session.program_id,
+          staff_member_id: other.id
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      view |> element("#remove-session-staff-#{ctx.regular.id}") |> render_click()
+
+      refute has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      assert has_element?(view, "#session-staffing-member-#{other.id}")
+    end
+
+    test "the last member's removal is disabled rather than hidden", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      assert has_element?(view, "#remove-session-staff-#{ctx.regular.id}[disabled]")
+    end
+
+    test "promoting a session lead blocks their removal", ctx do
+      substitute = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Dee", last_name: "Stone")
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_session(%{
+          provider_id: ctx.provider.id,
+          session_id: ctx.session.id,
+          staff_member_id: substitute.id
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      view |> element("#promote-session-staff-#{substitute.id}") |> render_click()
+
+      assert has_element?(view, "#remove-session-staff-#{substitute.id}[disabled]")
+    end
+
+    test "reverting returns the session to the program roster", ctx do
+      substitute = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Eve", last_name: "Stone")
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_session(%{
+          provider_id: ctx.provider.id,
+          session_id: ctx.session.id,
+          staff_member_id: substitute.id
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      view |> element("#session-staffing-revert-btn") |> render_click()
+
+      assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      refute has_element?(view, "#session-staffing-revert-btn")
     end
   end
 end

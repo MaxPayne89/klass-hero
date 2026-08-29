@@ -204,6 +204,42 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
   end
 
   @doc """
+  Starts the session the page is showing, then reloads via `reload_fn`.
+
+  Same id rule as `complete_session/2`: the id comes from `socket.assigns`, never
+  from the event params, because a page showing exactly one session has no reason
+  to take it back off the client.
+
+  It reloads rather than waiting for the `{:session_changed, id}` broadcast the
+  sessions lists relied on. A roster page's `handle_info` catch-all swallows that
+  message, so a broadcast-driven refresh would leave the page still offering Start
+  after the session had already advanced.
+  """
+  @spec start_session(Socket.t(), reload_fn()) :: {:noreply, Socket.t()}
+  def start_session(socket, reload_fn) do
+    session_id = socket.assigns.session_id
+
+    case KlassHero.Participation.start_session(socket.assigns.current_scope, session_id) do
+      {:ok, _session} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Session started successfully"))
+         |> reload_fn.()}
+
+      {:error, reason} when reason in [:unauthorized, :not_found, :program_closed] ->
+        {:noreply, put_flash(socket, :error, session_refusal_message(reason))}
+
+      {:error, reason} ->
+        Logger.error("[ParticipationLiveHandlers.start_session] Failed to start session",
+          session_id: session_id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Failed to start session: %{reason}", reason: inspect(reason)))}
+    end
+  end
+
+  @doc """
   The flash for a session write `KlassHero.Participation` refused.
 
   One function rather than a literal at each surface. Before #1373 the closed-program
