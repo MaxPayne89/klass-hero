@@ -1093,6 +1093,47 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       assert has_element?(view, "#session-staffing-revert-btn")
     end
 
+    test "the picker does not offer people the session already shows", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      refute has_element?(view, "#session-staffing-add-select option[value='#{ctx.regular.id}']")
+      assert has_element?(view, "#session-staffing-nobody-addable")
+    end
+
+    test "promote and remove are offered on a roster that is still inherited", ctx do
+      other = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Fay", last_name: "Stone")
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_program(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.session.program_id,
+          staff_member_id: other.id
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      assert has_element?(view, "#promote-session-staff-#{ctx.regular.id}")
+      assert has_element?(view, "#remove-session-staff-#{ctx.regular.id}:not([disabled])")
+    end
+
+    # The panel itself cannot be opened for a foreign session -- mount redirects
+    # first (see "cross-provider authorization"). What remains reachable is a
+    # foreign *staff* id on an already-open panel, which must close the panel and
+    # refuse without saying whether that person exists.
+    test "a foreign staff member cannot be promoted", ctx do
+      stranger = insert(:staff_member_schema, provider_id: insert(:provider_profile_schema).id)
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/participation/#{ctx.session.id}")
+      view |> element("#manage-session-staffing-btn") |> render_click()
+
+      render_click(view, "promote_session_lead", %{"staff-id" => stranger.id})
+
+      assert_flash(view, :error, "That session could not be found.")
+      refute has_element?(view, "#session-staffing-modal")
+    end
+
     test "removing works on an inherited roster and leaves the rest", ctx do
       other = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Cal", last_name: "Stone")
 
