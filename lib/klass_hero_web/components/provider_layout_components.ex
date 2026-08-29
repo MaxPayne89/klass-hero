@@ -39,7 +39,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
     {:home, "Overview", "hero-home", "/provider/dashboard"},
     {:programs, "Programs", "hero-book-open", "/provider/dashboard/programs"},
     {:roster, "Sessions", "hero-users", "/provider/sessions"},
-    {:calendar, "Schedule", "hero-calendar", nil},
+    {:calendar, "Schedule", "hero-calendar", "/provider/schedule"},
     {:messages, "Comms", "hero-inbox", "/provider/messages"},
     {:settings, "Settings", "hero-cog-6-tooth", "/users/settings"}
   ]

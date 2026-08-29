@@ -4206,4 +4206,112 @@ defmodule KlassHeroWeb.ProviderComponents do
     </ul>
     """
   end
+
+  @doc """
+  The Schedule calendar's grid of days.
+
+  Week and month share the seven-column grid; a day view is a plain list, since
+  one column of one is a grid in name only.
+
+  The grid is wider than a phone, so it scrolls inside its own container with the
+  house negative-margin bleed — the same shape `enrolled_tab/1` and `invite_table/1`
+  use, so the scroll region reaches the viewport edge on mobile and is inert from
+  `sm` up.
+  """
+  attr :weeks, :list, required: true, doc: "Rows of `Date`s, from `CalendarRange.weeks/1`"
+
+  attr :sessions_by_date, :map,
+    required: true,
+    doc: "`%{Date.t() => [session_summary]}`; a day with no sessions may be absent"
+
+  attr :focus_date, :any, required: true, doc: "The date the period is built around"
+  attr :view_mode, :atom, required: true, values: [:day, :week, :month]
+
+  def calendar_grid(assigns) do
+    assigns = assign(assigns, :today, Date.utc_today())
+
+    ~H"""
+    <div :if={@view_mode == :day} id="schedule-grid" class="space-y-3">
+      <.calendar_day_sessions
+        sessions={Map.get(@sessions_by_date, @focus_date, [])}
+        empty_label={gettext("Nothing scheduled on this day.")}
+      />
+    </div>
+
+    <div :if={@view_mode != :day} class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div id="schedule-grid" class="min-w-[640px]">
+        <div class="grid grid-cols-7 gap-px mb-px">
+          <div
+            :for={day <- List.first(@weeks)}
+            class={["px-2 py-1 text-center uppercase text-[var(--fg-muted)]", Theme.typography(:caption)]}
+          >
+            {Calendar.strftime(day, "%a")}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-7 gap-px bg-hero-grey-200">
+          <div
+            :for={day <- List.flatten(@weeks)}
+            id={"schedule-day-#{Date.to_iso8601(day)}"}
+            class={[
+              "min-h-[5.5rem] p-1.5 space-y-1 bg-white",
+              day.month != @focus_date.month && "bg-hero-grey-50"
+            ]}
+          >
+            <div class={[
+              "flex justify-end",
+              Theme.typography(:caption),
+              if(day == @today,
+                do: "font-bold text-hero-blue-700",
+                else: "text-[var(--fg-muted)]"
+              )
+            ]}>
+              {day.day}
+            </div>
+
+            <.calendar_session_chip :for={session <- Map.get(@sessions_by_date, day, [])} session={session} />
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :sessions, :list, required: true
+  attr :empty_label, :string, required: true
+
+  defp calendar_day_sessions(assigns) do
+    ~H"""
+    <p :if={@sessions == []} class={["text-[var(--fg-muted)]", Theme.typography(:body_small)]}>
+      {@empty_label}
+    </p>
+    <.calendar_session_chip :for={session <- @sessions} session={session} expanded?={true} />
+    """
+  end
+
+  attr :session, :map, required: true
+  attr :expanded?, :boolean, default: false
+
+  defp calendar_session_chip(assigns) do
+    ~H"""
+    <.link
+      id={"schedule-session-#{@session.id}"}
+      navigate={~p"/provider/participation/#{@session.id}"}
+      class={[
+        "block truncate border-l-2 border-hero-blue-600 bg-hero-blue-50 px-1.5 py-0.5",
+        "hover:bg-hero-blue-100 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]",
+        @expanded? && "p-3 truncate-none",
+        Theme.rounded(:sm),
+        Theme.typography(:caption),
+        Theme.transition(:normal)
+      ]}
+    >
+      <span class="font-semibold">{Calendar.strftime(@session.start_time, "%H:%M")}</span>
+      <span>{@session.program_name || gettext("Session")}</span>
+      <span :if={@expanded?} class="block text-[var(--fg-muted)]">
+        {@session.checked_in_count}/{@session.total_count} {gettext("checked in")}
+      </span>
+    </.link>
+    """
+  end
 end

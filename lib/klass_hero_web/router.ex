@@ -124,6 +124,7 @@ defmodule KlassHeroWeb.Router do
         {RestorePersona, :restore_persona}
       ] do
       scope "/provider", Provider do
+        live "/schedule", ScheduleLive, :index
         live "/sessions", SessionsLive, :index
         live "/sessions/new", SessionsLive, :new
         live "/participation/:session_id", ParticipationLive, :show
