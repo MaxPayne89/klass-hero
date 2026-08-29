@@ -6,6 +6,7 @@ defmodule KlassHeroWeb.Router do
   import Oban.Web.Router
 
   alias KlassHero.Shared.Tracing.LiveViewHook
+  alias KlassHeroWeb.Hooks.NavSurface
   alias KlassHeroWeb.Hooks.RestoreLocale
   alias KlassHeroWeb.Hooks.RestorePersona
   alias KlassHeroWeb.Plugs.SetLocale
@@ -121,12 +122,11 @@ defmodule KlassHeroWeb.Router do
         {KlassHeroWeb.UserAuth, :require_provider},
         {KlassHeroWeb.UserAuth, :fetch_unread_count},
         {RestoreLocale, :restore_locale},
-        {RestorePersona, :restore_persona}
+        {RestorePersona, :restore_persona},
+        {NavSurface, :provider}
       ] do
       scope "/provider", Provider do
         live "/schedule", ScheduleLive, :index
-        live "/sessions", SessionsLive, :index
-        live "/sessions/new", SessionsLive, :new
         live "/participation/:session_id", ParticipationLive, :show
 
         live "/complete-profile", ProfileCompletionLive, :complete
@@ -181,7 +181,8 @@ defmodule KlassHeroWeb.Router do
         {KlassHeroWeb.UserAuth, :require_staff},
         {KlassHeroWeb.UserAuth, :fetch_unread_count},
         {RestoreLocale, :restore_locale},
-        {RestorePersona, :restore_persona}
+        {RestorePersona, :restore_persona},
+        {NavSurface, :staff}
       ] do
       scope "/staff", Staff do
         live "/dashboard", StaffDashboardLive, :index

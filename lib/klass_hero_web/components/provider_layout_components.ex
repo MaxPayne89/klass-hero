@@ -33,22 +33,52 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
       icon: 1
     ]
 
+  alias KlassHeroWeb.Persona
   alias KlassHeroWeb.Theme
 
-  @desktop_items [
+  # Provider and staff share this chrome but not these routes. Deriving the
+  # lists from the surface is what stopped a staff-only person being offered
+  # six sidebar entries of which one worked -- see `KlassHeroWeb.Hooks.NavSurface`
+  # for why the surface comes from the live_session rather than the persona.
+  @provider_items [
     {:home, "Overview", "hero-home", "/provider/dashboard"},
     {:programs, "Programs", "hero-book-open", "/provider/dashboard/programs"},
-    {:roster, "Sessions", "hero-users", "/provider/sessions"},
     {:calendar, "Schedule", "hero-calendar", "/provider/schedule"},
     {:messages, "Comms", "hero-inbox", "/provider/messages"},
     {:settings, "Settings", "hero-cog-6-tooth", "/users/settings"}
   ]
 
-  @mobile_tabs [
+  @provider_tabs [
     {:home, "Overview", "hero-home", "/provider/dashboard"},
-    {:roster, "Sessions", "hero-users", "/provider/sessions"},
+    {:calendar, "Schedule", "hero-calendar", "/provider/schedule"},
     {:messages, "Comms", "hero-inbox", "/provider/messages"}
   ]
+
+  # Staff reuse the provider `active` atoms -- every staff LiveView already
+  # assigns :home, :roster or :messages -- so only the hrefs differ.
+  @staff_items [
+    {:home, "Overview", "hero-home", "/staff/dashboard"},
+    {:roster, "Sessions", "hero-users", "/staff/sessions"},
+    {:messages, "Comms", "hero-inbox", "/staff/messages"},
+    {:settings, "Settings", "hero-cog-6-tooth", "/users/settings"}
+  ]
+
+  @staff_tabs [
+    {:home, "Overview", "hero-home", "/staff/dashboard"},
+    {:roster, "Sessions", "hero-users", "/staff/sessions"},
+    {:messages, "Comms", "hero-inbox", "/staff/messages"}
+  ]
+
+  defp items_for(:staff), do: @staff_items
+  defp items_for(_surface), do: @provider_items
+
+  defp tabs_for(:staff), do: @staff_tabs
+  defp tabs_for(_surface), do: @provider_tabs
+
+  # The eyebrow and both nav labels used to say "Provider" to everyone, screen
+  # readers included. `Persona.label/1` already knows the right word.
+  defp surface_label(:staff), do: Persona.label(:staff)
+  defp surface_label(_surface), do: Persona.label(:provider)
 
   @doc """
   Provider sidebar (desktop) + bottom-tab nav (mobile).
@@ -63,8 +93,18 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
     required: true,
     values: [:home, :programs, :roster, :calendar, :messages, :settings, :subscription, :onboarding]
 
+  attr :surface, :atom,
+    default: :provider,
+    values: [:provider, :staff],
+    doc: "Which set of routes to offer; supplied per live_session by `NavSurface`"
+
   def pv_sidebar(assigns) do
-    assigns = assign(assigns, items: @desktop_items, tabs: @mobile_tabs)
+    assigns =
+      assign(assigns,
+        items: items_for(assigns.surface),
+        tabs: tabs_for(assigns.surface),
+        surface_label: surface_label(assigns.surface)
+      )
 
     ~H"""
     <aside class="hidden lg:flex w-[220px] shrink-0 h-screen sticky top-0 bg-black text-white flex-col">
@@ -73,10 +113,10 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
           <.kh_logo size={28} />
         </.link>
         <div class="text-[11px] text-white/60 uppercase tracking-wider font-bold mt-3">
-          {gettext("Provider")}
+          {@surface_label}
         </div>
       </div>
-      <nav class="p-3 flex-1" aria-label={gettext("Provider navigation")}>
+      <nav class="p-3 flex-1" aria-label={gettext("%{surface} navigation", surface: @surface_label)}>
         <.pv_sidebar_link
           :for={{key, label, icon, href} <- @items}
           key={key}
@@ -100,7 +140,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
 
     <nav
       class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black flex items-stretch h-[64px] pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,.18)]"
-      aria-label={gettext("Provider bottom navigation")}
+      aria-label={gettext("%{surface} bottom navigation", surface: @surface_label)}
     >
       <.pv_bottom_tab
         :for={{key, label, icon, href} <- @tabs}

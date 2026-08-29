@@ -79,14 +79,14 @@ defmodule KlassHeroWeb.ProviderComponents do
   Renders the provider dashboard tab navigation.
 
   `current_tab` is the active tab as the *component* understands it
-  (`:overview`, `:team`, `:programs`, `:sessions`). Callers translate their
+  (`:overview`, `:team`, `:programs`, `:schedule`). Callers translate their
   own `@live_action` into this vocabulary, so the nav stays decoupled from
   any single LiveView's routing scheme.
 
   ## Examples
 
       <.provider_nav_tabs current_tab={:overview} />
-      <.provider_nav_tabs current_tab={:sessions} />
+      <.provider_nav_tabs current_tab={:schedule} />
   """
   attr :current_tab, :atom, required: true
 
@@ -116,11 +116,11 @@ defmodule KlassHeroWeb.ProviderComponents do
           {gettext("My Programs")}
         </.nav_tab>
         <.nav_tab
-          navigate={~p"/provider/sessions"}
-          active={@current_tab == :sessions}
+          navigate={~p"/provider/schedule"}
+          active={@current_tab == :schedule}
           icon="hero-calendar-days-mini"
         >
-          {gettext("Sessions")}
+          {gettext("Schedule")}
         </.nav_tab>
       </div>
     </nav>
@@ -4243,7 +4243,10 @@ defmodule KlassHeroWeb.ProviderComponents do
         <div class="grid grid-cols-7 gap-px mb-px">
           <div
             :for={day <- List.first(@weeks)}
-            class={["px-2 py-1 text-center uppercase text-[var(--fg-muted)]", Theme.typography(:caption)]}
+            class={[
+              "px-2 py-1 text-center uppercase text-[var(--fg-muted)]",
+              Theme.typography(:caption)
+            ]}
           >
             {Calendar.strftime(day, "%a")}
           </div>
@@ -4269,7 +4272,10 @@ defmodule KlassHeroWeb.ProviderComponents do
               {day.day}
             </div>
 
-            <.calendar_session_chip :for={session <- Map.get(@sessions_by_date, day, [])} session={session} />
+            <.calendar_session_chip
+              :for={session <- Map.get(@sessions_by_date, day, [])}
+              session={session}
+            />
           </div>
         </div>
       </div>
