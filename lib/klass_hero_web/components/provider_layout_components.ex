@@ -324,7 +324,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
 
   attr :current_tab, :atom,
     required: true,
-    values: [:overview, :team, :programs, :sessions]
+    values: [:overview, :team, :programs, :schedule]
 
   slot :inner_block, required: true
 

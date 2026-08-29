@@ -72,6 +72,19 @@ defmodule KlassHeroWeb.Provider.ScheduleLiveTest do
       assert_patched(view, ~p"/provider/schedule?view=day&date=#{Date.to_iso8601(Date.utc_today())}")
     end
 
+    # Stepping alone would make a distant date a long click-through, and the
+    # retired list had a date picker.
+    test "jumping to a date patches straight there", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/schedule?view=month&date=2026-08-19")
+      render_async(view)
+
+      view
+      |> element("#schedule-date-form")
+      |> render_change(%{"date" => "2027-03-04"})
+
+      assert_patched(view, ~p"/provider/schedule?view=month&date=2027-03-04")
+    end
+
     test "switching view keeps the date you were looking at", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/schedule?view=month&date=2026-08-19")
       render_async(view)
@@ -111,6 +124,34 @@ defmodule KlassHeroWeb.Provider.ScheduleLiveTest do
       render_async(view)
 
       assert has_element?(view, "#schedule-session-#{padded.id}")
+    end
+
+    # The two fields the calendar adds to the query. `ProgramSession.occupancy/2`
+    # matches on :max_capacity and raises on a row without it, so a summary that
+    # lost the key would take the page down rather than degrade.
+    test "an oversubscribed session is marked, and the day view shows where it is", %{
+      conn: conn,
+      program: program
+    } do
+      full =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: ~D[2026-08-20],
+          location: "Gym B",
+          max_capacity: 1
+        )
+
+      for _ <- 1..2, do: insert(:participation_record_schema, session_id: full.id, status: :registered)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/schedule?view=month&date=2026-08-19")
+      render_async(view)
+
+      assert has_element?(view, "[data-occupancy='over']")
+
+      {:ok, day, _html} = live(conn, ~p"/provider/schedule?view=day&date=2026-08-20")
+      render_async(day)
+
+      assert render(day) =~ "Gym B"
     end
 
     test "another provider's session never appears", %{conn: conn} do

@@ -25,6 +25,17 @@
       {@period_label}
     </p>
 
+    <%!-- The retired list had a date picker; stepping alone would have made a
+    distant date a long click-through. Its own id, because two date_selectors on
+    one page would collide on the load-bearing "<id>-form". --%>
+    <.date_selector
+      id="schedule-date"
+      name="date"
+      value={@focus_date}
+      label={gettext("Jump to:")}
+      phx_change="change_date"
+    />
+
     <div class="flex gap-1" role="group" aria-label={gettext("Calendar view")}>
       <.kh_button
         :for={

@@ -392,8 +392,9 @@ defmodule KlassHero.Participation.Sessions do
       end_time: s.end_time,
       status: s.status,
       location: s.location,
-      # The Schedule calendar asks `ProgramSession.occupancy/2` about these rows,
-      # and that function matches on :max_capacity — without it here it raises.
+      # `calendar_session_chip/1` asks `ProgramSession.occupancy/2` about these
+      # rows, and that function matches on :max_capacity -- a row without the key
+      # raises rather than answering :uncapped.
       max_capacity: s.max_capacity,
       checked_in_count:
         count(fragment("CASE WHEN ? = ANY(?) THEN 1 END", pr.status, ^ParticipationRecord.checked_in_statuses())),

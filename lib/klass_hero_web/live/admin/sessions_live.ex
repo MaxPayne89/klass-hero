@@ -13,6 +13,10 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
   alias KlassHeroWeb.Admin.Components.SearchableSelect
   alias KlassHeroWeb.Theme
 
+  # One under the context's own guard, so this clamp always fires first and the
+  # raise stays what it is meant to be: a programmer error, never a user's click.
+  @max_range_days 366
+
   @impl true
   def mount(_params, _session, socket) do
     today = Date.utc_today()
@@ -116,9 +120,8 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     selected_status = parse_status(params["status"])
 
     socket
-    |> assign(:date_from, date_from)
-    |> assign(:date_to, date_to)
     |> assign(:selected_status, selected_status)
+    |> apply_date_range(date_from, date_to)
     |> load_sessions()
     |> then(&{:noreply, &1})
   end
@@ -200,6 +203,31 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     do: Map.merge(filters, %{date_from: from, date_to: to})
 
   defp maybe_add_date_range(filters, _, _), do: filters
+
+  # These two dates come from free-form date inputs, so the pair can be any span
+  # a person can click. `Participation.list_session_summaries/1` raises past a
+  # year rather than loading the table, which is right for the calendar that
+  # derives its range but would be a crash here. Clamp and say so: narrowing in
+  # silence would show a subset of what was asked for and look like the answer.
+  defp apply_date_range(socket, %Date{} = from, %Date{} = to) do
+    if Date.diff(to, from) >= @max_range_days do
+      clamped = Date.add(from, @max_range_days - 1)
+
+      socket
+      |> assign(:date_from, from)
+      |> assign(:date_to, clamped)
+      |> put_flash(
+        :info,
+        gettext("Showing the first year from %{from}. Narrow the range to see later sessions.",
+          from: Date.to_iso8601(from)
+        )
+      )
+    else
+      socket
+      |> assign(:date_from, from)
+      |> assign(:date_to, to)
+    end
+  end
 
   defp parse_date("", fallback), do: fallback
   defp parse_date(nil, fallback), do: fallback

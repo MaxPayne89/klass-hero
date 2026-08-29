@@ -12,9 +12,10 @@ defmodule KlassHeroWeb.ProviderComponents do
 
   import KlassHeroWeb.BookingComponents, only: [waiver_requirement: 1]
   import KlassHeroWeb.CoreComponents, only: [input: 1]
-  import KlassHeroWeb.ParticipationComponents, only: [participation_status: 1]
+  import KlassHeroWeb.ParticipationComponents, only: [occupancy_mark: 1, participation_status: 1]
   import KlassHeroWeb.UIComponents
 
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Shared.ChangesetErrors
   alias KlassHeroWeb.Presenters.ChildPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter
@@ -4314,8 +4315,14 @@ defmodule KlassHeroWeb.ProviderComponents do
     >
       <span class="font-semibold">{Calendar.strftime(@session.start_time, "%H:%M")}</span>
       <span>{@session.program_name || gettext("Session")}</span>
+      <%!-- Only :over renders, so an at-capacity session stays quiet and an
+      oversubscribed one is visible without opening the day. --%>
+      <.occupancy_mark state={ProgramSession.occupancy(@session, @session.total_count)} />
       <span :if={@expanded?} class="block text-[var(--fg-muted)]">
         {@session.checked_in_count}/{@session.total_count} {gettext("checked in")}
+      </span>
+      <span :if={@expanded? and @session.location} class="block text-[var(--fg-muted)]">
+        {@session.location}
       </span>
     </.link>
     """
