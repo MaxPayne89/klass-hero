@@ -1072,6 +1072,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       assert has_element?(view, "#session-staffing-modal")
       assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      assert render(view) =~ "Using the program"
       # Nothing to revert to while the roster is still the program's.
       refute has_element?(view, "#session-staffing-revert-btn")
     end
@@ -1091,6 +1092,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       assert has_element?(view, "#session-staffing-member-#{substitute.id}")
       assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
       assert has_element?(view, "#session-staffing-revert-btn")
+      assert render(view) =~ "Staffed just for this session"
     end
 
     test "the picker does not offer people the session already shows", ctx do
@@ -1175,6 +1177,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       view |> element("#promote-session-staff-#{substitute.id}") |> render_click()
 
+      assert has_element?(view, "#session-staffing-lead-badge-#{substitute.id}")
       assert has_element?(view, "#remove-session-staff-#{substitute.id}[disabled]")
     end
 
