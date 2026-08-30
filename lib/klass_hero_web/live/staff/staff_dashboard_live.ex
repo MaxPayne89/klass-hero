@@ -528,8 +528,8 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
         </div>
       <% end %>
       <%!-- Chrome deliberately mirrors ProviderComponents.sessions_modal/1 rather than
-    the roster popup below, which predates it and carries no dialog role, no
-    aria-modal and no Escape handling. #1536 collapses the roster onto this shape. --%>
+      the roster popup above, which predates it and carries no dialog role, no
+      aria-modal and no Escape handling. #1536 collapses the roster onto this shape. --%>
       <div
         :if={@sessions_modal}
         id="staff-sessions-modal"
