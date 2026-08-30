@@ -420,4 +420,7 @@ defmodule KlassHero.Provider do
 
   @doc "Lists per-session detail rows for a provider's program from the projection."
   defdelegate list_program_sessions(provider_id, program_id), to: Programs
+
+  @doc "A program's sessions narrowed to the ones one staff member actually works."
+  defdelegate list_staffed_program_sessions(provider_id, program_id, staff_member_id), to: Programs
 end

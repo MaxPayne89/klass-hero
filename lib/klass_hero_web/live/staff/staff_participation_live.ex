@@ -57,7 +57,14 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
   end
 
   # No session id in the params: this page shows one session and already holds its
-  # id, put there by the mount-time guard.
+  # id, put there by the mount-time guard. Both lifecycle handlers below rely on
+  # that, and on the reload rather than the `{:session_changed, id}` broadcast —
+  # this module's `handle_info` catch-all swallows it.
+  @impl true
+  def handle_event("start_session", _params, socket) do
+    ParticipationLiveHandlers.start_session(socket, &load_session_data/1)
+  end
+
   @impl true
   def handle_event("complete_session", _params, socket) do
     ParticipationLiveHandlers.complete_session(socket, &load_session_data/1)

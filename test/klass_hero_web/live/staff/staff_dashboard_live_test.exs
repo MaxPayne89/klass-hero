@@ -12,6 +12,8 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   # needs, the listing row the dashboard renders, and the Program Staff Assignment
   # that puts it there. Category is arbitrary — since #1323 it gates nothing, so
   # these tests no longer derive it from `staff.tags`.
+  alias KlassHero.Provider.SessionDetail
+
   defp assigned_program(provider, staff, attrs \\ []) do
     program =
       insert(
@@ -26,6 +28,31 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
     })
 
     program
+  end
+
+  # A session on `program`, seeded on both sides: the write row the staffing read
+  # needs, and the `provider_session_details` row the popup renders from.
+  defp session_on(program, provider, attrs \\ []) do
+    session =
+      insert(
+        :program_session_schema,
+        Keyword.merge([program_id: program.id, session_date: ~D[2026-05-01]], attrs)
+      )
+
+    %SessionDetail{}
+    |> Ecto.Changeset.change(%{
+      session_id: session.id,
+      program_id: program.id,
+      provider_id: provider.id,
+      program_title: program.title,
+      session_date: session.session_date,
+      start_time: ~T[15:00:00],
+      end_time: ~T[16:00:00],
+      status: :scheduled
+    })
+    |> KlassHero.Repo.insert!()
+
+    session
   end
 
   describe "staff dashboard" do
@@ -95,7 +122,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
       assert has_element?(view, "#completed-programs")
-      refute has_element?(view, "#sessions-link-#{closed.id}")
+      refute has_element?(view, "#sessions-btn-#{closed.id}")
       refute has_element?(view, "#roster-btn-#{closed.id}")
     end
 
@@ -158,7 +185,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
-      assert has_element?(view, "#sessions-link-#{program.id}")
+      assert has_element?(view, "#sessions-btn-#{program.id}")
       assert has_element?(view, "#roster-btn-#{program.id}")
     end
 
@@ -507,6 +534,142 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       # dashboard link appears — not one without the other.
       refute has_element?(view, "#become-provider-cta")
       assert has_element?(view, "#cross-nav-provider-link")
+    end
+  end
+
+  describe "sessions popup" do
+    setup %{conn: conn} do
+      user = user_fixture(intended_roles: [:staff])
+      provider = provider_profile_fixture()
+
+      staff =
+        staff_member_fixture(%{
+          provider_id: provider.id,
+          user_id: user.id,
+          active: true,
+          invitation_status: :accepted
+        })
+
+      %{conn: log_in_user(conn, user), provider: provider, staff: staff}
+    end
+
+    test "clicking Sessions opens the popup instead of navigating away", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      program = assigned_program(provider, staff, title: "Judo")
+      session_on(program, provider)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      refute has_element?(view, "#staff-sessions-modal")
+
+      view |> element("#sessions-btn-#{program.id}") |> render_click()
+
+      assert has_element?(view, "#staff-sessions-modal")
+      assert render(view) =~ "Judo"
+    end
+
+    test "a session row is a working entry point into taking attendance", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      program = assigned_program(provider, staff)
+      session = session_on(program, provider)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+      view |> element("#sessions-btn-#{program.id}") |> render_click()
+
+      assert has_element?(
+               view,
+               ~s|#staff-sessions-modal a[href="/staff/participation/#{session.id}"]|
+             )
+
+      # Following it proves the row lands: StaffParticipationLive re-guards at
+      # mount and would push_navigate away from a session this member cannot work.
+      assert {:ok, _view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
+    end
+
+    test "a session of the program this member does not work is not listed", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      program = assigned_program(provider, staff)
+      mine = session_on(program, provider)
+      theirs = session_on(program, provider, session_date: ~D[2026-05-08])
+      substitute = staff_member_fixture(%{provider_id: provider.id, active: true})
+
+      insert(:session_staff_assignment_schema,
+        provider_id: provider.id,
+        session_id: theirs.id,
+        staff_member_id: substitute.id
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+      view |> element("#sessions-btn-#{program.id}") |> render_click()
+
+      assert has_element?(view, ~s|a[href="/staff/participation/#{mine.id}"]|)
+      refute has_element?(view, ~s|a[href="/staff/participation/#{theirs.id}"]|)
+    end
+
+    test "closing dismisses the popup", %{conn: conn, provider: provider, staff: staff} do
+      program = assigned_program(provider, staff)
+      session_on(program, provider)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+      view |> element("#sessions-btn-#{program.id}") |> render_click()
+      view |> element("#close-sessions-btn") |> render_click()
+
+      refute has_element?(view, "#staff-sessions-modal")
+    end
+
+    test "only one popup is ever open: opening Sessions dismisses the Roster", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      program = assigned_program(provider, staff)
+      session_on(program, provider)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      view |> element("#roster-btn-#{program.id}") |> render_click()
+      assert has_element?(view, "#staff-roster-modal")
+
+      view |> element("#sessions-btn-#{program.id}") |> render_click()
+      assert has_element?(view, "#staff-sessions-modal")
+      refute has_element?(view, "#staff-roster-modal")
+
+      view |> element("#roster-btn-#{program.id}") |> render_click()
+      assert has_element?(view, "#staff-roster-modal")
+      refute has_element?(view, "#staff-sessions-modal")
+    end
+
+    test "a Closed Program's sessions refuse a forged event", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      closed = assigned_program(provider, staff, end_date: Date.add(Date.utc_today(), -60))
+      session_on(closed, provider)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      render_click(view, "view_sessions", %{"id" => closed.id})
+
+      refute has_element?(view, "#staff-sessions-modal")
+    end
+
+    test "a program this member is not assigned to is refused", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      render_hook(view, "view_sessions", %{"id" => Ecto.UUID.generate()})
+
+      refute has_element?(view, "#staff-sessions-modal")
+      assert render(view) =~ "Unauthorized"
     end
   end
 end

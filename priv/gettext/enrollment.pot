@@ -11,95 +11,95 @@
 msgid ""
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3284
-#: lib/klass_hero_web/components/provider_components.ex:3301
+#: lib/klass_hero_web/components/provider_components.ex:3219
+#: lib/klass_hero_web/components/provider_components.ex:3236
 #, elixir-autogen, elixir-format
 msgid "Child first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3285
-#: lib/klass_hero_web/components/provider_components.ex:3302
+#: lib/klass_hero_web/components/provider_components.ex:3220
+#: lib/klass_hero_web/components/provider_components.ex:3237
 #, elixir-autogen, elixir-format
 msgid "Child last name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3286
-#: lib/klass_hero_web/components/provider_components.ex:3303
+#: lib/klass_hero_web/components/provider_components.ex:3221
+#: lib/klass_hero_web/components/provider_components.ex:3238
 #, elixir-autogen, elixir-format
 msgid "Date of birth"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3297
+#: lib/klass_hero_web/components/provider_components.ex:3232
 #, elixir-autogen, elixir-format
 msgid "Grade"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3287
+#: lib/klass_hero_web/components/provider_components.ex:3222
 #, elixir-autogen, elixir-format
 msgid "Guardian email"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3288
+#: lib/klass_hero_web/components/provider_components.ex:3223
 #, elixir-autogen, elixir-format
 msgid "Guardian first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3289
+#: lib/klass_hero_web/components/provider_components.ex:3224
 #, elixir-autogen, elixir-format
 msgid "Guardian last name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3296
+#: lib/klass_hero_web/components/provider_components.ex:3231
 #, elixir-autogen, elixir-format
 msgid "Program"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3298
+#: lib/klass_hero_web/components/provider_components.ex:3233
 #, elixir-autogen, elixir-format
 msgid "School"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3290
+#: lib/klass_hero_web/components/provider_components.ex:3225
 #, elixir-autogen, elixir-format
 msgid "Second guardian email"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3292
+#: lib/klass_hero_web/components/provider_components.ex:3227
 #, elixir-autogen, elixir-format
 msgid "Second guardian first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3294
+#: lib/klass_hero_web/components/provider_components.ex:3229
 #, elixir-autogen, elixir-format
 msgid "Second guardian last name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3224
+#: lib/klass_hero_web/components/provider_components.ex:3159
 #, elixir-autogen, elixir-format
 msgid "Date of birth \"%{value}\" is not a valid date. Please correct it and resend."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3218
+#: lib/klass_hero_web/components/provider_components.ex:3153
 #, elixir-autogen, elixir-format
 msgid "Invite link could not be generated (no token). Please resend."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3232
+#: lib/klass_hero_web/components/provider_components.ex:3167
 #, elixir-autogen, elixir-format
 msgid "The invitation email could not be delivered. Please check the address and resend."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3221
+#: lib/klass_hero_web/components/provider_components.ex:3156
 #, elixir-autogen, elixir-format
 msgid "The program is full, so this child could not be enrolled."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3235
+#: lib/klass_hero_web/components/provider_components.ex:3170
 #, elixir-autogen, elixir-format
 msgid "This invite could not be completed and no retries remain. Please resend."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:3244
+#: lib/klass_hero_web/components/provider_components.ex:3179
 #, elixir-autogen, elixir-format
 msgid "This invite could not be completed. Please resend."
 msgstr ""
