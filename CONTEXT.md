@@ -326,9 +326,8 @@ A Program's recurring schedule (meeting days + meeting start/end times + a date 
 The word names both a *responsibility* (the lead Staff Member running a Program/Session) and a *display snapshot* (the read-only copy of that person's name/headshot held in the Program Catalog). The snapshot is captured at Program creation, so it goes **stale** if the underlying Staff Member is renamed — the same denormalisation hazard as the `program_name` projection.
 **Resolution:** Keep "Instructor" for the lead responsibility. Treat the catalog copy as a derived display projection that must be refreshed from Provider data (via events), not hand-maintained.
 
-**Session-level staffing is not modelled.**
-A Staff Member (and a lead **Instructor**) can conceptually be assigned to a single **Session**, not just a whole **Program** — a class may need different people on different days. Today only `Program Staff Assignment` exists (Program-level); a Session has a child **Roster** but no staff assignment.
-**Resolution (direction, not yet built):** Session-level staff assignment is a recognised gap, not a decision to keep staffing Program-only.
+**~~Session-level staffing is not modelled.~~ Resolved (#782, #1413).**
+A Staff Member (and a lead **Instructor**) can be assigned to a single **Session**, not just a whole **Program** — a class may need different people on different days. A Session carries a *sparse override*: rows exist only for the dates that differ, and one resolver answers the staffing question for any Session, falling back to the Program roster where no override exists. So "assigned to the Program" is no longer the whole answer, and every consumer asks at Session grain (#783).
 
 **"Participant" collides with "Participation".**
 Messaging's **Participant** is a conversation member (a **User**). The Participation context tracks children at **Sessions** through **Participation Record** and deliberately never uses the noun "Participant" for them.
