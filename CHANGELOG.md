@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.98.0](https://github.com/MaxPayne89/klass-hero/compare/v0.97.2...v0.98.0) (2026-08-30)
+
+
+### Features
+
+* manage a session's start and staffing from the session page ([#1574](https://github.com/MaxPayne89/klass-hero/issues/1574)) ([946ee0e](https://github.com/MaxPayne89/klass-hero/commit/946ee0ea8d5755b9b6d137b5cf0d46eff09d8368))
+* replace My Sessions with a Schedule calendar ([#1582](https://github.com/MaxPayne89/klass-hero/issues/1582)) ([2449b11](https://github.com/MaxPayne89/klass-hero/commit/2449b1101adcebfdf2167c9ce80e9d01f327c2cf))
+
 ## [0.97.2](https://github.com/MaxPayne89/klass-hero/compare/v0.97.1...v0.97.2) (2026-08-29)
 
 
