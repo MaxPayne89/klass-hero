@@ -285,6 +285,15 @@ defmodule KlassHero.Participation.Sessions do
   @max_session_span_days 366
 
   @doc """
+  The widest date range `list_session_summaries/1` will serve.
+
+  Exported so a caller taking a range from user input can clamp to it rather
+  than re-declaring the number and drifting from the guard below.
+  """
+  @spec max_session_span_days() :: pos_integer()
+  def max_session_span_days, do: @max_session_span_days
+
+  @doc """
   Lists sessions with their attendance tally, for the admin table and the
   provider Schedule calendar.
 
@@ -312,7 +321,7 @@ defmodule KlassHero.Participation.Sessions do
 
     filters
     |> resolve_provider_scope()
-    |> aggregate_admin_sessions()
+    |> aggregate_session_summaries()
     |> enrich_session_names()
   end
 
@@ -379,10 +388,10 @@ defmodule KlassHero.Participation.Sessions do
   defp resolve_provider_scope(filters), do: filters
 
   # Local aggregation over Participation-owned tables only; no cross-context joins.
-  defp aggregate_admin_sessions(filters) do
+  defp aggregate_session_summaries(filters) do
     ProgramSession
     |> join(:left, [s], pr in ParticipationRecord, on: pr.session_id == s.id)
-    |> apply_admin_filters(filters)
+    |> apply_session_filters(filters)
     |> group_by([s, _pr], s.id)
     |> select([s, pr], %{
       id: s.id,
@@ -405,7 +414,7 @@ defmodule KlassHero.Participation.Sessions do
     |> Enum.map(&atomize_session_status/1)
   end
 
-  defp apply_admin_filters(query, filters) do
+  defp apply_session_filters(query, filters) do
     query
     |> maybe_filter_date(filters)
     |> maybe_filter_date_range(filters)

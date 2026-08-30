@@ -12,10 +12,12 @@ defmodule KlassHeroWeb.ProviderComponents do
 
   import KlassHeroWeb.BookingComponents, only: [waiver_requirement: 1]
   import KlassHeroWeb.CoreComponents, only: [input: 1]
-  import KlassHeroWeb.ParticipationComponents, only: [occupancy_mark: 1, participation_status: 1]
+
+  import KlassHeroWeb.ParticipationComponents,
+    only: [occupancy_mark: 1, occupancy_state: 2, participation_status: 1]
+
   import KlassHeroWeb.UIComponents
 
-  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Shared.ChangesetErrors
   alias KlassHeroWeb.Presenters.ChildPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter
@@ -4209,9 +4211,10 @@ defmodule KlassHeroWeb.ProviderComponents do
   end
 
   @doc """
-  The Schedule calendar's grid of days.
+  The Schedule calendar's week and month grid.
 
-  Week and month share the seven-column grid; a day view is a plain list, since
+  Seven columns of days; week rows are implicit in the layout, so this takes a
+  flat list. The day view is a plain list and lives in `calendar_day_list/1` —
   one column of one is a grid in name only.
 
   The grid is wider than a phone, so it scrolls inside its own container with the
@@ -4219,31 +4222,23 @@ defmodule KlassHeroWeb.ProviderComponents do
   use, so the scroll region reaches the viewport edge on mobile and is inert from
   `sm` up.
   """
-  attr :weeks, :list, required: true, doc: "Rows of `Date`s, from `CalendarRange.weeks/1`"
+  attr :days, :list, required: true, doc: "The days on screen, from `CalendarRange.range_for/2`"
 
   attr :sessions_by_date, :map,
     required: true,
     doc: "`%{Date.t() => [session_summary]}`; a day with no sessions may be absent"
 
   attr :focus_date, :any, required: true, doc: "The date the period is built around"
-  attr :view_mode, :atom, required: true, values: [:day, :week, :month]
 
   def calendar_grid(assigns) do
     assigns = assign(assigns, :today, Date.utc_today())
 
     ~H"""
-    <div :if={@view_mode == :day} id="schedule-grid" class="space-y-3">
-      <.calendar_day_sessions
-        sessions={Map.get(@sessions_by_date, @focus_date, [])}
-        empty_label={gettext("Nothing scheduled on this day.")}
-      />
-    </div>
-
-    <div :if={@view_mode != :day} class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+    <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
       <div id="schedule-grid" class="min-w-[640px]">
         <div class="grid grid-cols-7 gap-px mb-px">
           <div
-            :for={day <- List.first(@weeks)}
+            :for={day <- Enum.take(@days, 7)}
             class={[
               "px-2 py-1 text-center uppercase text-[var(--fg-muted)]",
               Theme.typography(:caption)
@@ -4255,7 +4250,7 @@ defmodule KlassHeroWeb.ProviderComponents do
 
         <div class="grid grid-cols-7 gap-px bg-hero-grey-200">
           <div
-            :for={day <- List.flatten(@weeks)}
+            :for={day <- @days}
             id={"schedule-day-#{Date.to_iso8601(day)}"}
             class={[
               "min-h-[5.5rem] p-1.5 space-y-1 bg-white",
@@ -4284,15 +4279,19 @@ defmodule KlassHeroWeb.ProviderComponents do
     """
   end
 
+  @doc """
+  The Schedule calendar's day view — one date's sessions, expanded.
+  """
   attr :sessions, :list, required: true
-  attr :empty_label, :string, required: true
 
-  defp calendar_day_sessions(assigns) do
+  def calendar_day_list(assigns) do
     ~H"""
-    <p :if={@sessions == []} class={["text-[var(--fg-muted)]", Theme.typography(:body_small)]}>
-      {@empty_label}
-    </p>
-    <.calendar_session_chip :for={session <- @sessions} session={session} expanded?={true} />
+    <div id="schedule-grid" class="space-y-3">
+      <p :if={@sessions == []} class={["text-[var(--fg-muted)]", Theme.typography(:body_small)]}>
+        {gettext("Nothing scheduled on this day.")}
+      </p>
+      <.calendar_session_chip :for={session <- @sessions} session={session} expanded?={true} />
+    </div>
     """
   end
 
@@ -4305,9 +4304,10 @@ defmodule KlassHeroWeb.ProviderComponents do
       id={"schedule-session-#{@session.id}"}
       navigate={~p"/provider/participation/#{@session.id}"}
       class={[
-        "block truncate border-l-2 border-hero-blue-600 bg-hero-blue-50 px-1.5 py-0.5",
+        "block border-l-2 border-hero-blue-600 bg-hero-blue-50 px-1.5 py-0.5",
         "hover:bg-hero-blue-100 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]",
-        @expanded? && "p-3 truncate-none",
+        !@expanded? && "truncate",
+        @expanded? && "p-3",
         Theme.rounded(:sm),
         Theme.typography(:caption),
         Theme.transition(:normal)
@@ -4316,8 +4316,10 @@ defmodule KlassHeroWeb.ProviderComponents do
       <span class="font-semibold">{Calendar.strftime(@session.start_time, "%H:%M")}</span>
       <span>{@session.program_name || gettext("Session")}</span>
       <%!-- Only :over renders, so an at-capacity session stays quiet and an
-      oversubscribed one is visible without opening the day. --%>
-      <.occupancy_mark state={ProgramSession.occupancy(@session, @session.total_count)} />
+      oversubscribed one is visible without opening the day. Through
+      `occupancy_state/2` rather than `ProgramSession.occupancy/2`, which would
+      skip its cancelled-session clause. --%>
+      <.occupancy_mark state={occupancy_state(@session, @session.total_count)} />
       <span :if={@expanded?} class="block text-[var(--fg-muted)]">
         {@session.checked_in_count}/{@session.total_count} {gettext("checked in")}
       </span>

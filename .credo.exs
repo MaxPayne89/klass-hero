@@ -213,11 +213,12 @@
           {Jump.CredoChecks.LiveViewFormCanBeRehydrated, []},
           {Jump.CredoChecks.SafeBinaryToTerm, []},
           # ignored_assigns is not a waiver list: each of these IS read, just outside the
-          # module. :active_nav and :page_subtitle by the marketing/parent/provider layouts
-          # via assigns[...], :fluid? and :live_resource by Backpex.HTML.Layout. Deleting
-          # them because the check cannot see the reader would break nav on ~30 pages.
+          # module. :active_nav, :nav_surface and :page_subtitle by the
+          # marketing/parent/provider layouts via assigns[...], :fluid? and :live_resource
+          # by Backpex.HTML.Layout. Deleting them because the check cannot see the reader
+          # would break nav on ~30 pages.
           {Jump.CredoChecks.UnusedLiveViewAssign,
-           ignored_assigns: [:active_nav, :page_subtitle, :fluid?, :live_resource]},
+           ignored_assigns: [:active_nav, :nav_surface, :page_subtitle, :fluid?, :live_resource]},
           {Jump.CredoChecks.TopLevelAliasImportRequire, []},
           {Jump.CredoChecks.TestHasNoAssertions, []},
           {Jump.CredoChecks.TooManyAssertions, []},

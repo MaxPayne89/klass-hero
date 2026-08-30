@@ -461,7 +461,9 @@ defmodule KlassHeroWeb.UserLive.Settings do
       |> assign(:confirming_persona, nil)
       |> assign(:addable_personas, addable_personas(socket.assigns.current_scope))
 
-    {:ok, socket, layout: layout_for(socket.assigns[:active_persona])}
+    persona = socket.assigns[:active_persona]
+
+    {:ok, assign(socket, :nav_surface, nav_surface_for(persona)), layout: layout_for(persona)}
   end
 
   # Settings used to render in the marketing layout — the only authenticated
@@ -473,6 +475,19 @@ defmodule KlassHeroWeb.UserLive.Settings do
   defp layout_for(:provider), do: {Layouts, :provider_app}
   defp layout_for(:staff), do: {Layouts, :provider_app}
   defp layout_for(_persona), do: {Layouts, :parent_app}
+
+  # `provider_app` is reached from three places, and only two of them are
+  # live_sessions that `NavSurface` can hook. This is the third, so without this
+  # a staff-only person on Settings was offered the *provider* sidebar -- five of
+  # whose six entries `require_role/4` bounces -- reached from the Settings entry
+  # in the staff sidebar itself.
+  #
+  # Persona rather than the live_session, unlike every routed surface: this page
+  # is gated by no role, so there is no live_session fact to prefer. Persona is
+  # safe to read here because `RestorePersona` has already dropped any the user
+  # does not hold (`Persona.available/1`), so it cannot offer a surface they lack.
+  defp nav_surface_for(:staff), do: :staff
+  defp nav_surface_for(_persona), do: :provider
 
   # Only these two are self-grantable. :staff is an employment link to someone
   # else's business (ADR-0005) — a provider adds themselves to their own team

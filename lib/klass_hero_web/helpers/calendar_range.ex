@@ -23,7 +23,8 @@ defmodule KlassHeroWeb.Helpers.CalendarRange do
 
   `step(:month, ~D[2026-01-31], 1)` is 28 February, not 3 March. `Date.shift/2`
   does the clamping; `Date.add/2` would not, and stepping off a 31st would then
-  skip a month entirely.
+  skip a month entirely. The view modes are already `Date.shift/2`'s own unit
+  keys, so one clause covers all three.
   """
 
   @type view_mode :: :day | :week | :month
@@ -49,24 +50,7 @@ defmodule KlassHeroWeb.Helpers.CalendarRange do
   Moves the focus date one whole period forward (`1`) or back (`-1`).
   """
   @spec step(view_mode(), Date.t(), -1 | 1) :: Date.t()
-  def step(:day, %Date{} = date, direction) when direction in [-1, 1] do
-    Date.add(date, direction)
+  def step(mode, %Date{} = date, direction) when mode in [:day, :week, :month] and direction in [-1, 1] do
+    Date.shift(date, [{mode, direction}])
   end
-
-  def step(:week, %Date{} = date, direction) when direction in [-1, 1] do
-    Date.add(date, 7 * direction)
-  end
-
-  def step(:month, %Date{} = date, direction) when direction in [-1, 1] do
-    Date.shift(date, month: direction)
-  end
-
-  @doc """
-  Chunks a range into rows of seven for rendering.
-
-  A day range yields one row of one — the grid renders what the range holds
-  rather than padding a single day out to a week nobody asked for.
-  """
-  @spec weeks(Date.Range.t()) :: [[Date.t()]]
-  def weeks(%Date.Range{} = range), do: Enum.chunk_every(range, 7)
 end

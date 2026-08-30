@@ -56,6 +56,10 @@ defmodule KlassHero.Participation do
   @spec list_session_summaries(map()) :: [Sessions.session_summary()]
   defdelegate list_session_summaries(filters \\ %{}), to: Sessions
 
+  @doc "The widest date range `list_session_summaries/1` will serve."
+  @spec max_session_span_days() :: pos_integer()
+  defdelegate max_session_span_days(), to: Sessions
+
   @doc "Lists a provider's sessions, optionally for one date."
   defdelegate list_provider_sessions(provider_id, date \\ nil), to: Sessions
 

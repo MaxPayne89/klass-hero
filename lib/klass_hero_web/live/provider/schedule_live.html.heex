@@ -69,11 +69,15 @@
       <.error_alert errors={[gettext("The schedule could not be loaded. Try again in a moment.")]} />
     </:failed>
 
+    <.calendar_day_list
+      :if={@view_mode == :day}
+      sessions={Map.get(sessions_by_date, @focus_date, [])}
+    />
     <.calendar_grid
-      weeks={CalendarRange.weeks(@range)}
+      :if={@view_mode != :day}
+      days={Enum.to_list(@range)}
       sessions_by_date={sessions_by_date}
       focus_date={@focus_date}
-      view_mode={@view_mode}
     />
   </.async_result>
 </div>

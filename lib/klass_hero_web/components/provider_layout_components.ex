@@ -75,11 +75,6 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
   defp tabs_for(:staff), do: @staff_tabs
   defp tabs_for(_surface), do: @provider_tabs
 
-  # The eyebrow and both nav labels used to say "Provider" to everyone, screen
-  # readers included. `Persona.label/1` already knows the right word.
-  defp surface_label(:staff), do: Persona.label(:staff)
-  defp surface_label(_surface), do: Persona.label(:provider)
-
   @doc """
   Provider sidebar (desktop) + bottom-tab nav (mobile).
 
@@ -103,7 +98,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
       assign(assigns,
         items: items_for(assigns.surface),
         tabs: tabs_for(assigns.surface),
-        surface_label: surface_label(assigns.surface)
+        surface_label: Persona.label(assigns.surface)
       )
 
     ~H"""
@@ -157,13 +152,12 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
   attr :key, :atom, required: true
   attr :label, :string, required: true
   attr :icon, :string, required: true
-  attr :href, :string, default: nil
+  attr :href, :string, required: true
   attr :active?, :boolean, default: false
 
   defp pv_sidebar_link(assigns) do
     ~H"""
     <a
-      :if={@href}
       href={@href}
       class={[
         "group relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl mb-1 transition-all font-semibold text-sm no-underline",
@@ -183,13 +177,6 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
       />
       {@label}
     </a>
-    <span
-      :if={!@href}
-      class="flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl mb-1 font-semibold text-sm text-white/40 cursor-not-allowed"
-      title={gettext("Coming soon")}
-    >
-      <.icon name={@icon} class="w-5 h-5 opacity-60 shrink-0" /> {@label}
-    </span>
     """
   end
 
@@ -199,13 +186,12 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
   attr :key, :atom, required: true
   attr :label, :string, required: true
   attr :icon, :string, required: true
-  attr :href, :string, default: nil
+  attr :href, :string, required: true
   attr :active?, :boolean, default: false
 
   defp pv_bottom_tab(assigns) do
     ~H"""
     <a
-      :if={@href}
       href={@href}
       aria-current={@active? && "page"}
       class={[
@@ -312,12 +298,12 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
   Composed by every LiveView that should feel like a tab on the provider
   dashboard. The shell knows nothing about which LV uses it — callers pass
   their `business` and the `current_tab` atom
-  (`:overview`, `:team`, `:programs`, `:sessions`).
+  (`:overview`, `:team`, `:programs`, `:schedule`).
 
   ## Examples
 
-      <.pv_dashboard_chrome business={@business} current_tab={:sessions}>
-        <.sessions_section ... />
+      <.pv_dashboard_chrome business={@business} current_tab={:programs}>
+        <.programs_section ... />
       </.pv_dashboard_chrome>
   """
   attr :business, :map, required: true

@@ -55,22 +55,6 @@ defmodule KlassHeroWeb.Helpers.CalendarRangeTest do
     end
   end
 
-  describe "weeks/1" do
-    test "chunks a month grid into whole weeks" do
-      weeks = :month |> CalendarRange.range_for(@saturday) |> CalendarRange.weeks()
-
-      assert length(weeks) == 6
-      assert Enum.all?(weeks, &(length(&1) == 7))
-      assert weeks |> List.first() |> List.first() == ~D[2026-07-27]
-      assert weeks |> List.last() |> List.last() == ~D[2026-09-06]
-    end
-
-    test "a single day is one short week rather than padding invented days" do
-      assert :day |> CalendarRange.range_for(@saturday) |> CalendarRange.weeks() ==
-               [[@saturday]]
-    end
-  end
-
   describe "properties" do
     defp date_generator do
       gen all(offset <- StreamData.integer(-2000..2000)) do
@@ -93,7 +77,7 @@ defmodule KlassHeroWeb.Helpers.CalendarRangeTest do
       end
     end
 
-    property "a month grid never exceeds six weeks" do
+    property "a month grid never exceeds six weeks (42 days)" do
       check all(date <- date_generator()) do
         assert Date.diff(CalendarRange.range_for(:month, date).last, CalendarRange.range_for(:month, date).first) + 1 <=
                  42

@@ -174,6 +174,8 @@ defmodule KlassHero.ProgramCatalog do
   staff may act on.
   """
   @spec get_programs_by_ids([String.t()]) :: [Program.t()]
+  def get_programs_by_ids([]), do: []
+
   def get_programs_by_ids(ids) when is_list(ids) do
     Program
     |> where([p], p.id in ^ids)

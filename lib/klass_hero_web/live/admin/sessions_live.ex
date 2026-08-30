@@ -13,10 +13,6 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
   alias KlassHeroWeb.Admin.Components.SearchableSelect
   alias KlassHeroWeb.Theme
 
-  # One under the context's own guard, so this clamp always fires first and the
-  # raise stays what it is meant to be: a programmer error, never a user's click.
-  @max_range_days 366
-
   @impl true
   def mount(_params, _session, socket) do
     today = Date.utc_today()
@@ -209,9 +205,15 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
   # year rather than loading the table, which is right for the calendar that
   # derives its range but would be a crash here. Clamp and say so: narrowing in
   # silence would show a subset of what was asked for and look like the answer.
+  # Admin's range comes from two free-form date inputs, so it can exceed what the
+  # context serves. Clamping here keeps the context's raise what it is meant to be:
+  # a programmer error, never a user's click. Reading the bound from the context,
+  # in the context's own unit, is what stops the two drifting apart.
   defp apply_date_range(socket, %Date{} = from, %Date{} = to) do
-    if Date.diff(to, from) >= @max_range_days do
-      clamped = Date.add(from, @max_range_days - 1)
+    max_days = Participation.max_session_span_days()
+
+    if Date.diff(to, from) + 1 > max_days do
+      clamped = Date.add(from, max_days - 1)
 
       socket
       |> assign(:date_from, from)
