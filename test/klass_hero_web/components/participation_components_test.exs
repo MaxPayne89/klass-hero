@@ -3,6 +3,7 @@ defmodule KlassHeroWeb.ParticipationComponentsTest do
 
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Provider.SessionDetail
   alias KlassHeroWeb.ParticipationComponents
 
   describe "participation_status/1" do
@@ -98,6 +99,93 @@ defmodule KlassHeroWeb.ParticipationComponentsTest do
         )
 
       refute html =~ "Over capacity"
+    end
+  end
+
+  describe "session_table/1" do
+    # Every status navigates, cancelled included: a cancelled session still has a
+    # roster worth reading, and hiding the way in was the whole complaint in #1074.
+    for {persona, base} <- [provider: "/provider/participation", staff: "/staff/participation"],
+        status <- [:scheduled, :in_progress, :completed, :cancelled] do
+      test "a #{status} row links every cell to the #{persona} session page" do
+        html =
+          render_component(&ParticipationComponents.session_table/1,
+            sessions: [session_detail(session_id: "s-42", status: unquote(status))],
+            persona: unquote(persona)
+          )
+
+        hrefs =
+          html
+          |> LazyHTML.from_fragment()
+          |> LazyHTML.query("tbody a")
+          |> LazyHTML.attribute("href")
+
+        # One per cell, not one per row: an <a> wrapping <td>s is invalid HTML.
+        assert hrefs == List.duplicate("#{unquote(base)}/s-42", 4)
+      end
+    end
+
+    test "shows the empty state when there are no sessions" do
+      html =
+        render_component(&ParticipationComponents.session_table/1,
+          sessions: [],
+          persona: :provider
+        )
+
+      assert html =~ "No sessions scheduled yet"
+    end
+
+    test "a caller may replace the empty-state sentence" do
+      html =
+        render_component(&ParticipationComponents.session_table/1,
+          sessions: [],
+          persona: :staff,
+          empty_message: "No sessions assigned to you yet."
+        )
+
+      assert html =~ "No sessions assigned to you yet."
+      refute html =~ "No sessions scheduled yet"
+    end
+
+    test "renders the sessions it is given, in the order given" do
+      html =
+        render_component(&ParticipationComponents.session_table/1,
+          sessions: [
+            session_detail(session_id: "s-1", current_assigned_staff_name: "Alice"),
+            session_detail(
+              session_id: "s-2",
+              session_date: ~D[2026-05-08],
+              status: :cancelled,
+              current_assigned_staff_name: nil
+            )
+          ],
+          persona: :provider
+        )
+
+      assert html =~ "Alice"
+      assert html =~ "Unassigned"
+      # Cancelled row hides attendance (same-line match; a dotall regex spans rows
+      # and fires even for a correct implementation).
+      refute html =~ ~r/0\s*\/\s*0.*cancelled/i
+    end
+
+    defp session_detail(overrides) do
+      struct!(
+        %SessionDetail{
+          session_id: "s-1",
+          program_id: "prog-1",
+          provider_id: "prv-1",
+          session_date: ~D[2026-05-01],
+          start_time: ~T[15:00:00],
+          end_time: ~T[16:00:00],
+          status: :scheduled,
+          program_title: "Judo",
+          current_assigned_staff_name: "Alice",
+          checked_in_count: 0,
+          total_count: 0
+        },
+        overrides
+      )
     end
   end
 end

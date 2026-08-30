@@ -25,6 +25,14 @@
       >
         <:actions>
           <.kh_button
+            :if={@session.status == :scheduled}
+            id="start-session-btn"
+            variant={:dark}
+            phx-click="start_session"
+          >
+            {gettext("Start Session")}
+          </.kh_button>
+          <.kh_button
             :if={@session.status == :in_progress}
             id="complete-session-btn"
             variant={:dark}

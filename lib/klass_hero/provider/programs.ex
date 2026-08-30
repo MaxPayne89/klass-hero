@@ -15,6 +15,8 @@ defmodule KlassHero.Provider.Programs do
 
   alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
+  alias KlassHero.Provider.Assignments
+  alias KlassHero.Provider.ReadModels.SessionStaffing
   alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
@@ -44,6 +46,37 @@ defmodule KlassHero.Provider.Programs do
       order_by: [asc: d.session_date, asc: d.start_time]
     )
     |> Repo.all()
+  end
+
+  @doc """
+  A program's sessions narrowed to the ones `staff_member_id` actually works.
+
+  Program assignment is not the answer on its own: staffing is session-grained
+  since #783, so a staff member can be on a program and off one of its sessions.
+  Rows from this list are entry points into `/staff/participation/:id`, which
+  re-asks exactly this question — an unfiltered list would render rows that bounce
+  the caller straight back out.
+
+  `SessionDetail.current_assigned_staff_id` cannot answer it either: it names one
+  person while a roster holds several.
+
+  Five queries regardless of session count — one for the projection rows, four
+  inside `list_session_staffing/1` — and one when the program has no sessions.
+  Never per row.
+
+  Keyed on `session_id`: `SessionDetail`'s primary key is `:session_id` and it has
+  no `:id` field at all, so `& &1.id` raises here rather than returning nil.
+
+  Closed programs need no clause of their own — `staffed_by?/2` refuses everyone on
+  one (#1082).
+  """
+  @spec list_staffed_program_sessions(String.t(), String.t(), String.t()) :: [SessionDetail.t()]
+  def list_staffed_program_sessions(provider_id, program_id, staff_member_id)
+      when is_binary(provider_id) and is_binary(program_id) and is_binary(staff_member_id) do
+    sessions = list_program_sessions(provider_id, program_id)
+    staffing = Assignments.list_session_staffing(Enum.map(sessions, & &1.session_id))
+
+    Enum.filter(sessions, &SessionStaffing.staffed_by?(staffing[&1.session_id], staff_member_id))
   end
 
   @doc """

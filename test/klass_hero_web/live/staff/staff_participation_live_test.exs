@@ -174,6 +174,33 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       assert has_element?(view, "#complete-session-btn")
     end
 
+    # A scheduled session used to be a dead end here: the page offered no way to
+    # start it, so staff had to go back out to the sessions list to do it (#1550).
+    test "offers Start Session while the session is still scheduled", %{
+      conn: conn,
+      session: session
+    } do
+      scheduled = Ecto.Changeset.change(session, %{status: :scheduled}) |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/staff/participation/#{scheduled.id}")
+
+      assert has_element?(view, "#start-session-btn")
+      refute has_element?(view, "#complete-session-btn")
+    end
+
+    test "starting the session makes the roster actionable", %{conn: conn, session: session} do
+      scheduled = Ecto.Changeset.change(session, %{status: :scheduled}) |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/staff/participation/#{scheduled.id}")
+
+      view |> element("#start-session-btn") |> render_click()
+
+      assert_flash(view, :info, "Session started successfully")
+      assert Repo.get!(ProgramSession, scheduled.id).status == :in_progress
+      refute has_element?(view, "#start-session-btn")
+      assert has_element?(view, "#complete-session-btn")
+    end
+
     # One handler serves both surfaces, so this proves the staff wiring reaches
     # it — not that the absence logic works, which `record_absence_test.exs` owns.
     test "a staff member can mark a child absent with a reason", %{

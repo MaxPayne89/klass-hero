@@ -10,6 +10,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
 
   alias KlassHero.Participation.ParticipationCollection
   alias KlassHero.Participation.ProgramSession
+  alias KlassHeroWeb.Persona
   alias KlassHeroWeb.Theme
   alias Phoenix.HTML.Form
 
@@ -658,6 +659,109 @@ defmodule KlassHeroWeb.ParticipationComponents do
         </div>
       </div>
     <% end %>
+    """
+  end
+
+  @doc """
+  The table of a program's sessions: one row per session, every cell a link into
+  that session's participation page.
+
+  The *table* is what the provider's programs page and the staff dashboard share;
+  the modal chrome around it and the capabilities beside it are not, so each caller
+  supplies its own and this renders only what is genuinely common — the same split
+  `KlassHeroWeb.ProviderComponents.session_form/1` makes.
+
+  `persona` resolves the row destination through `KlassHeroWeb.Persona.session_path/2`
+  rather than a base-path string, so both routes stay `~p`-verified: a typo fails to
+  compile instead of 404ing at runtime.
+
+  Rows render in the order given. The caller owns that order because the two surfaces
+  want different ones — the provider reads a program's schedule chronologically, while
+  staff open this to act on what is next.
+
+  ## Example
+
+      <.session_table sessions={@modal.sessions} persona={:provider} />
+  """
+  attr :sessions, :list,
+    required: true,
+    doc: "`KlassHero.Provider.SessionDetail` rows, already ordered by the caller."
+
+  attr :persona, :atom, required: true, values: [:provider, :staff]
+
+  attr :empty_message, :string,
+    default: nil,
+    doc: """
+    Overrides the empty-state sentence. Deliberately `nil` rather than a `gettext/1`
+    default: an attr default is evaluated once at compile time, which would freeze the
+    compiling process's locale into every render.
+    """
+
+  def session_table(assigns) do
+    ~H"""
+    <%= if @sessions == [] do %>
+      <div class="text-center py-12">
+        <.icon name="hero-calendar-days" class="w-12 h-12 text-hero-grey-300 mx-auto" />
+        <p class="mt-4 text-[var(--fg-muted)]">
+          {@empty_message || gettext("No sessions scheduled yet.")}
+        </p>
+      </div>
+    <% else %>
+      <table class="w-full text-sm">
+        <thead class="bg-hero-grey-50 text-left">
+          <tr>
+            <th class="px-4 py-3">{gettext("Date / time")}</th>
+            <th class="px-4 py-3">{gettext("Assigned staff")}</th>
+            <th class="px-4 py-3">{gettext("Attendance")}</th>
+            <th class="px-4 py-3">{gettext("Status")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            :for={s <- @sessions}
+            class={["border-t hover:bg-hero-grey-50", Theme.transition(:normal)]}
+          >
+            <.session_cell persona={@persona} session_id={s.session_id}>
+              {Calendar.strftime(s.session_date, "%a, %d %b")}
+              <span class="text-[var(--fg-muted)]">
+                · {Calendar.strftime(s.start_time, "%H:%M")}–{Calendar.strftime(
+                  s.end_time,
+                  "%H:%M"
+                )}
+              </span>
+            </.session_cell>
+            <.session_cell persona={@persona} session_id={s.session_id}>
+              {s.current_assigned_staff_name || gettext("Unassigned")}
+            </.session_cell>
+            <.session_cell persona={@persona} session_id={s.session_id}>
+              <span :if={s.status != :cancelled}>
+                {s.checked_in_count} / {s.total_count}
+              </span>
+            </.session_cell>
+            <.session_cell persona={@persona} session_id={s.session_id}>
+              <.participation_status status={s.status} size={:sm} />
+            </.session_cell>
+          </tr>
+        </tbody>
+      </table>
+    <% end %>
+    """
+  end
+
+  # The link wraps each cell, not the row: an <a> around <td>s is invalid HTML, and
+  # LiveView's DOM patcher reparents it on the next update. Four cells, four links —
+  # which is what `session_table/1`'s tests pin.
+  attr :persona, :atom, required: true
+  attr :session_id, :string, required: true
+  slot :inner_block, required: true
+
+  defp session_cell(assigns) do
+    ~H"""
+    <td class="p-0">
+      <.link navigate={Persona.session_path(@persona, @session_id)} class="block px-4 py-3">
+        {render_slot(@inner_block)}
+      </.link>
+    </td>
     """
   end
 

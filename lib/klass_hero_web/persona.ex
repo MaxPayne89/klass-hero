@@ -117,6 +117,17 @@ defmodule KlassHeroWeb.Persona do
   def path(:provider, :messages), do: ~p"/provider/messages"
   def path(:staff, :messages), do: ~p"/staff/messages"
 
+  @doc """
+  The one URL serving `session_id`'s participation roster on `persona`.
+
+  Separate from `path/2` because it takes an id; same rule otherwise — one clause
+  per persona, each `~p`-verified. `:parent` has no clause on purpose: parents have
+  no participation roster, and a clause returning `nil` would render a dead link.
+  """
+  @spec session_path(:provider | :staff, String.t()) :: String.t()
+  def session_path(:provider, session_id), do: ~p"/provider/participation/#{session_id}"
+  def session_path(:staff, session_id), do: ~p"/staff/participation/#{session_id}"
+
   @doc "How the persona is named to the person holding it."
   @spec label(t()) :: String.t()
   def label(:parent), do: gettext("Parent")

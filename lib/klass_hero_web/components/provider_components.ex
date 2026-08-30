@@ -14,7 +14,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   import KlassHeroWeb.CoreComponents, only: [input: 1]
 
   import KlassHeroWeb.ParticipationComponents,
-    only: [occupancy_mark: 1, occupancy_state: 2, participation_status: 1]
+    only: [occupancy_mark: 1, occupancy_state: 2, session_table: 1]
 
   import KlassHeroWeb.UIComponents
 
@@ -2023,72 +2023,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
 
         <div :if={!@modal.form} class="flex-1 overflow-y-auto">
-          <%= if @modal.sessions == [] do %>
-            <div class="text-center py-12">
-              <.icon name="hero-calendar-days" class="w-12 h-12 text-hero-grey-300 mx-auto" />
-              <p class="mt-4 text-[var(--fg-muted)]">{gettext("No sessions scheduled yet.")}</p>
-            </div>
-          <% else %>
-            <table class="w-full text-sm">
-              <thead class="bg-hero-grey-50 text-left">
-                <tr>
-                  <th class="px-4 py-3">{gettext("Date / time")}</th>
-                  <th class="px-4 py-3">{gettext("Assigned staff")}</th>
-                  <th class="px-4 py-3">{gettext("Attendance")}</th>
-                  <th class="px-4 py-3">{gettext("Status")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <%!-- The link wraps each cell, not the row: an <a> around <td>s is invalid
-                HTML, and LiveView's DOM patcher reparents it on the next update. --%>
-                <tr
-                  :for={s <- @modal.sessions}
-                  class={["border-t hover:bg-hero-grey-50", Theme.transition(:normal)]}
-                >
-                  <td class="p-0">
-                    <.link
-                      navigate={~p"/provider/participation/#{s.session_id}"}
-                      class="block px-4 py-3"
-                    >
-                      {Calendar.strftime(s.session_date, "%a, %d %b")}
-                      <span class="text-[var(--fg-muted)]">
-                        · {Calendar.strftime(s.start_time, "%H:%M")}–{Calendar.strftime(
-                          s.end_time,
-                          "%H:%M"
-                        )}
-                      </span>
-                    </.link>
-                  </td>
-                  <td class="p-0">
-                    <.link
-                      navigate={~p"/provider/participation/#{s.session_id}"}
-                      class="block px-4 py-3"
-                    >
-                      {s.current_assigned_staff_name || gettext("Unassigned")}
-                    </.link>
-                  </td>
-                  <td class="p-0">
-                    <.link
-                      navigate={~p"/provider/participation/#{s.session_id}"}
-                      class="block px-4 py-3"
-                    >
-                      <span :if={s.status != :cancelled}>
-                        {s.checked_in_count} / {s.total_count}
-                      </span>
-                    </.link>
-                  </td>
-                  <td class="p-0">
-                    <.link
-                      navigate={~p"/provider/participation/#{s.session_id}"}
-                      class="block px-4 py-3"
-                    >
-                      <.participation_status status={s.status} size={:sm} />
-                    </.link>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          <% end %>
+          <.session_table sessions={@modal.sessions} persona={:provider} />
         </div>
       </div>
     </div>

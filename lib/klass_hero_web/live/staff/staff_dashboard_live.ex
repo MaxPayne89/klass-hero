@@ -40,6 +40,12 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           |> assign(:provider?, Scope.provider?(socket.assigns.current_scope))
           |> assign(:upgrade_confirm?, false)
           |> assign(:show_roster, false)
+          |> assign(:sessions_modal, nil)
+          # Titles the popup from the server's own data. `view_roster` still takes
+          # its title from client params, which is display-only but spoofable; an
+          # id that clears `authorized?/2` is in this map by construction, since
+          # both derive from the same `load_assigned_programs/1` split.
+          |> assign(:program_titles, Map.new(programs, &{&1.id, &1.title}))
           |> assign(:roster_entries, [])
           |> assign(:roster_program_name, nil)
           |> assign(:roster_program_id, nil)
@@ -114,7 +120,9 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
       enrolled_count = Enum.count(roster, &(&1.status == :confirmed))
 
       {:noreply,
-       assign(socket,
+       socket
+       |> assign(:sessions_modal, nil)
+       |> assign(
          show_roster: true,
          roster_program_name: Map.get(params, "title", program_id),
          roster_program_id: program_id,
@@ -129,15 +137,39 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
 
   @impl true
   def handle_event("close_roster", _params, socket) do
-    {:noreply,
-     assign(socket,
-       show_roster: false,
-       roster_entries: [],
-       roster_program_name: nil,
-       roster_program_id: nil,
-       can_message?: false,
-       roster_enrolled_count: 0
-     )}
+    {:noreply, reset_roster(socket)}
+  end
+
+  # Only one popup may be open at a time. Both are full-screen `z-50` overlays and
+  # the sessions popup binds `phx-window-keydown`, so with both on screen stacking
+  # falls to DOM order, Escape reaches only one of them, and a click inside the
+  # roster counts as "away" from the sessions panel and closes it.
+  @impl true
+  def handle_event("view_sessions", %{"id" => program_id}, socket) do
+    if StaffProgramAccess.authorized?(socket.assigns.program_access, program_id) do
+      sessions =
+        Provider.list_staffed_program_sessions(
+          socket.assigns.provider.id,
+          program_id,
+          socket.assigns.staff_member.id
+        )
+
+      {:noreply,
+       socket
+       |> reset_roster()
+       |> assign(:sessions_modal, %{
+         program_id: program_id,
+         program_title: Map.fetch!(socket.assigns.program_titles, program_id),
+         sessions: upcoming_first(sessions)
+       })}
+    else
+      {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
+    end
+  end
+
+  @impl true
+  def handle_event("close_sessions", _params, socket) do
+    {:noreply, assign(socket, :sessions_modal, nil)}
   end
 
   @impl true
@@ -328,9 +360,10 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
             <p :if={program.category} class="text-sm text-zinc-500 mt-1">{program.category}</p>
 
             <div class="flex gap-2 mt-3">
-              <.link
-                id={"sessions-link-#{program.id}"}
-                navigate={~p"/staff/sessions?program_id=#{program.id}"}
+              <button
+                id={"sessions-btn-#{program.id}"}
+                phx-click="view_sessions"
+                phx-value-id={program.id}
                 class={[
                   "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium",
                   "text-hero-blue-600 bg-hero-blue-50 hover:bg-hero-blue-100",
@@ -339,7 +372,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
               >
                 <.icon name="hero-calendar-days-mini" class="w-4 h-4" />
                 {gettext("Sessions")}
-              </.link>
+              </button>
 
               <button
                 id={"roster-btn-#{program.id}"}
@@ -494,8 +527,69 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           </div>
         </div>
       <% end %>
+      <%!-- Chrome deliberately mirrors ProviderComponents.sessions_modal/1 rather than
+      the roster popup above, which predates it and carries no dialog role, no
+      aria-modal and no Escape handling. #1536 collapses the roster onto this shape. --%>
+      <div
+        :if={@sessions_modal}
+        id="staff-sessions-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="staff-sessions-modal-title"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        phx-window-keydown="close_sessions"
+        phx-key="escape"
+      >
+        <div
+          class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+          phx-click-away="close_sessions"
+        >
+          <div class="flex items-center justify-between gap-3 px-6 py-4 border-b">
+            <h2 id="staff-sessions-modal-title" class={Theme.typography(:section_title)}>
+              {gettext("Sessions — %{title}", title: @sessions_modal.program_title)}
+            </h2>
+            <button
+              type="button"
+              id="close-sessions-btn"
+              phx-click="close_sessions"
+              aria-label={gettext("Close")}
+            >
+              <.icon name="hero-x-mark" class="w-5 h-5" />
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto">
+            <.session_table
+              sessions={@sessions_modal.sessions}
+              persona={:staff}
+              empty_message={gettext("No sessions assigned to you yet.")}
+            />
+          </div>
+        </div>
+      </div>
     </div>
     """
+  end
+
+  defp reset_roster(socket) do
+    assign(socket,
+      show_roster: false,
+      roster_entries: [],
+      roster_program_name: nil,
+      roster_program_id: nil,
+      can_message?: false,
+      roster_enrolled_count: 0
+    )
+  end
+
+  # Staff open this to act on what is next, so today and later lead and the past
+  # follows, most recent first. `list_staffed_program_sessions/3` returns the whole
+  # run ascending, which on a term-long program opens on its first week.
+  defp upcoming_first(sessions) do
+    today = Date.utc_today()
+    {past, upcoming} = Enum.split_with(sessions, &Date.before?(&1.session_date, today))
+
+    upcoming ++ Enum.reverse(past)
   end
 
   defp staff_message_button_title(entry) do
