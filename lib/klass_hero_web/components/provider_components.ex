@@ -4303,15 +4303,20 @@ defmodule KlassHeroWeb.ProviderComponents do
     <.link
       id={"schedule-session-#{@session.id}"}
       navigate={~p"/provider/participation/#{@session.id}"}
-      class={[
-        "block border-l-2 border-hero-blue-600 bg-hero-blue-50 px-1.5 py-0.5",
-        "hover:bg-hero-blue-100 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]",
-        !@expanded? && "truncate",
-        @expanded? && "p-3",
-        Theme.rounded(:sm),
-        Theme.typography(:caption),
-        Theme.transition(:normal)
-      ]}
+      class={
+        [
+          "block border-l-2 border-hero-blue-600 bg-hero-blue-50",
+          "hover:bg-hero-blue-100 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]",
+          # Both paddings are conditional because Tailwind orders `p-*` before
+          # `px-*`/`py-*` regardless of the order they are written in, so a `p-3`
+          # sitting beside a base `px-1.5 py-0.5` silently loses to it.
+          !@expanded? && "truncate px-1.5 py-0.5",
+          @expanded? && "p-3",
+          Theme.rounded(:sm),
+          Theme.typography(:caption),
+          Theme.transition(:normal)
+        ]
+      }
     >
       <span class="font-semibold">{Calendar.strftime(@session.start_time, "%H:%M")}</span>
       <span>{@session.program_name || gettext("Session")}</span>

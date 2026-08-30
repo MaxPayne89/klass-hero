@@ -4191,7 +4191,7 @@ msgid "Sending"
 msgstr "Wird gesendet"
 
 #: lib/klass_hero_web/components/participation_components.ex:71
-#: lib/klass_hero_web/components/provider_components.ex:4317
+#: lib/klass_hero_web/components/provider_components.ex:4322
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:16
 #, elixir-autogen, elixir-format
 msgid "Session"
@@ -8330,7 +8330,7 @@ msgstr "Heute"
 msgid "Your sessions, by day, week or month"
 msgstr "Ihre Termine – nach Tag, Woche oder Monat"
 
-#: lib/klass_hero_web/components/provider_components.ex:4324
+#: lib/klass_hero_web/components/provider_components.ex:4329
 #, elixir-autogen, elixir-format
 msgid "checked in"
 msgstr "eingecheckt"
