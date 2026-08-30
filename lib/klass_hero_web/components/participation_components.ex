@@ -115,7 +115,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
             </span>
             <%!-- A cancelled session ran for nobody, so its overflow is not a fact worth
                   flagging. A completed one still is: that roster genuinely attended. --%>
-            <.occupancy_mark state={occupancy_state(@session, @attendance)} />
+            <.occupancy_mark state={occupancy_state(@session, @attendance.roster)} />
           </div>
         <% end %>
       </div>
@@ -174,8 +174,16 @@ defmodule KlassHeroWeb.ParticipationComponents do
     """
   end
 
-  defp occupancy_state(%{status: :cancelled}, _attendance), do: :uncapped
-  defp occupancy_state(session, attendance), do: ProgramSession.occupancy(session, attendance.roster)
+  @doc """
+  Whether a session's roster has outgrown its capacity.
+
+  Public because the Schedule calendar renders the same mark from a session
+  summary rather than a card, and calling `ProgramSession.occupancy/2` directly
+  would skip the cancelled clause below.
+  """
+  @spec occupancy_state(map(), non_neg_integer()) :: atom()
+  def occupancy_state(%{status: :cancelled}, _roster_count), do: :uncapped
+  def occupancy_state(session, roster_count), do: ProgramSession.occupancy(session, roster_count)
 
   @doc """
   Marks a Session whose Roster has outgrown its Session Capacity.

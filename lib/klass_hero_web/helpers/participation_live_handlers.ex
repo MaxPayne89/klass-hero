@@ -8,8 +8,8 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
   (a `socket -> socket` function, typically `&load_session_data/1`) so that
   divergence stays in the LiveView while the orchestration lives here.
 
-  `session_refusal_message/1` is the one exception to "these two surfaces": the two
-  *sessions list* LiveViews call it too, because a refused session write should not
+  `session_refusal_message/1` is the one exception to "these two surfaces": the
+  staff sessions list calls it too, because a refused session write should not
   read differently depending on which page asked.
 
   The `find_participation_record/2` lookup below is **not** the authorization

@@ -12,7 +12,10 @@ defmodule KlassHeroWeb.ProviderComponents do
 
   import KlassHeroWeb.BookingComponents, only: [waiver_requirement: 1]
   import KlassHeroWeb.CoreComponents, only: [input: 1]
-  import KlassHeroWeb.ParticipationComponents, only: [participation_status: 1]
+
+  import KlassHeroWeb.ParticipationComponents,
+    only: [occupancy_mark: 1, occupancy_state: 2, participation_status: 1]
+
   import KlassHeroWeb.UIComponents
 
   alias KlassHero.Shared.ChangesetErrors
@@ -79,14 +82,14 @@ defmodule KlassHeroWeb.ProviderComponents do
   Renders the provider dashboard tab navigation.
 
   `current_tab` is the active tab as the *component* understands it
-  (`:overview`, `:team`, `:programs`, `:sessions`). Callers translate their
+  (`:overview`, `:team`, `:programs`, `:schedule`). Callers translate their
   own `@live_action` into this vocabulary, so the nav stays decoupled from
   any single LiveView's routing scheme.
 
   ## Examples
 
       <.provider_nav_tabs current_tab={:overview} />
-      <.provider_nav_tabs current_tab={:sessions} />
+      <.provider_nav_tabs current_tab={:schedule} />
   """
   attr :current_tab, :atom, required: true
 
@@ -116,11 +119,11 @@ defmodule KlassHeroWeb.ProviderComponents do
           {gettext("My Programs")}
         </.nav_tab>
         <.nav_tab
-          navigate={~p"/provider/sessions"}
-          active={@current_tab == :sessions}
+          navigate={~p"/provider/schedule"}
+          active={@current_tab == :schedule}
           icon="hero-calendar-days-mini"
         >
-          {gettext("Sessions")}
+          {gettext("Schedule")}
         </.nav_tab>
       </div>
     </nav>
@@ -4204,6 +4207,131 @@ defmodule KlassHeroWeb.ProviderComponents do
     <ul class="list-disc pl-5 space-y-1">
       <li :for={item <- @items}>{item}</li>
     </ul>
+    """
+  end
+
+  @doc """
+  The Schedule calendar's week and month grid.
+
+  Seven columns of days; week rows are implicit in the layout, so this takes a
+  flat list. The day view is a plain list and lives in `calendar_day_list/1` —
+  one column of one is a grid in name only.
+
+  The grid is wider than a phone, so it scrolls inside its own container with the
+  house negative-margin bleed — the same shape `enrolled_tab/1` and `invite_table/1`
+  use, so the scroll region reaches the viewport edge on mobile and is inert from
+  `sm` up.
+  """
+  attr :days, :list, required: true, doc: "The days on screen, from `CalendarRange.range_for/2`"
+
+  attr :sessions_by_date, :map,
+    required: true,
+    doc: "`%{Date.t() => [session_summary]}`; a day with no sessions may be absent"
+
+  attr :focus_date, :any, required: true, doc: "The date the period is built around"
+
+  def calendar_grid(assigns) do
+    assigns = assign(assigns, :today, Date.utc_today())
+
+    ~H"""
+    <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div id="schedule-grid" class="min-w-[640px]">
+        <div class="grid grid-cols-7 gap-px mb-px">
+          <div
+            :for={day <- Enum.take(@days, 7)}
+            class={[
+              "px-2 py-1 text-center uppercase text-[var(--fg-muted)]",
+              Theme.typography(:caption)
+            ]}
+          >
+            {Calendar.strftime(day, "%a")}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-7 gap-px bg-hero-grey-200">
+          <div
+            :for={day <- @days}
+            id={"schedule-day-#{Date.to_iso8601(day)}"}
+            class={[
+              "min-h-[5.5rem] p-1.5 space-y-1 bg-white",
+              day.month != @focus_date.month && "bg-hero-grey-50"
+            ]}
+          >
+            <div class={[
+              "flex justify-end",
+              Theme.typography(:caption),
+              if(day == @today,
+                do: "font-bold text-hero-blue-700",
+                else: "text-[var(--fg-muted)]"
+              )
+            ]}>
+              {day.day}
+            </div>
+
+            <.calendar_session_chip
+              :for={session <- Map.get(@sessions_by_date, day, [])}
+              session={session}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  The Schedule calendar's day view — one date's sessions, expanded.
+  """
+  attr :sessions, :list, required: true
+
+  def calendar_day_list(assigns) do
+    ~H"""
+    <div id="schedule-grid" class="space-y-3">
+      <p :if={@sessions == []} class={["text-[var(--fg-muted)]", Theme.typography(:body_small)]}>
+        {gettext("Nothing scheduled on this day.")}
+      </p>
+      <.calendar_session_chip :for={session <- @sessions} session={session} expanded?={true} />
+    </div>
+    """
+  end
+
+  attr :session, :map, required: true
+  attr :expanded?, :boolean, default: false
+
+  defp calendar_session_chip(assigns) do
+    ~H"""
+    <.link
+      id={"schedule-session-#{@session.id}"}
+      navigate={~p"/provider/participation/#{@session.id}"}
+      class={
+        [
+          "block border-l-2 border-hero-blue-600 bg-hero-blue-50",
+          "hover:bg-hero-blue-100 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]",
+          # Both paddings are conditional because Tailwind orders `p-*` before
+          # `px-*`/`py-*` regardless of the order they are written in, so a `p-3`
+          # sitting beside a base `px-1.5 py-0.5` silently loses to it.
+          !@expanded? && "truncate px-1.5 py-0.5",
+          @expanded? && "p-3",
+          Theme.rounded(:sm),
+          Theme.typography(:caption),
+          Theme.transition(:normal)
+        ]
+      }
+    >
+      <span class="font-semibold">{Calendar.strftime(@session.start_time, "%H:%M")}</span>
+      <span>{@session.program_name || gettext("Session")}</span>
+      <%!-- Only :over renders, so an at-capacity session stays quiet and an
+      oversubscribed one is visible without opening the day. Through
+      `occupancy_state/2` rather than `ProgramSession.occupancy/2`, which would
+      skip its cancelled-session clause. --%>
+      <.occupancy_mark state={occupancy_state(@session, @session.total_count)} />
+      <span :if={@expanded?} class="block text-[var(--fg-muted)]">
+        {@session.checked_in_count}/{@session.total_count} {gettext("checked in")}
+      </span>
+      <span :if={@expanded? and @session.location} class="block text-[var(--fg-muted)]">
+        {@session.location}
+      </span>
+    </.link>
     """
   end
 end

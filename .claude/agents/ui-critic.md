@@ -36,7 +36,7 @@ This agent reviews a real, rendered UI — not code in the abstract. It always w
 - Dev server: `http://localhost:4000`.
 - Browser tool: **Chrome DevTools MCP** (project convention per `.claude/rules/mcp-integration.md`) — use `emulate` for true mobile viewports (touch + device pixel ratio) and `lighthouse_audit` for accessibility scoring.
 - Seed logins (password is `password` for all): parent `anna.mueller@example.com`, provider `lena.hartmann@example.com`, admin `app@klasshero.com`.
-- Key routes: `/`, `/programs`, `/programs/:id`, `/dashboard`, `/programs/:id/booking`, `/messages`, `/provider/dashboard`, `/provider/sessions`, `/admin/*`.
+- Key routes: `/`, `/programs`, `/programs/:id`, `/dashboard`, `/programs/:id/booking`, `/messages`, `/provider/dashboard`, `/provider/schedule`, `/admin/*`.
 
 ---
 

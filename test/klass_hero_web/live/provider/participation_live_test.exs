@@ -184,7 +184,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       foreign_session =
         insert(:program_session_schema, program_id: foreign_program.id, status: "in_progress")
 
-      assert {:error, {:live_redirect, %{to: "/provider/sessions", flash: flash}}} =
+      assert {:error, {:live_redirect, %{to: "/provider/schedule", flash: flash}}} =
                live(conn, ~p"/provider/participation/#{foreign_session.id}")
 
       assert flash["error"] =~ "not"
@@ -227,10 +227,10 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   describe "sidebar navigation" do
     setup [:create_session_with_child]
 
-    test "highlights Sessions in the sidebar", %{conn: conn, session: session} do
+    test "highlights Schedule in the sidebar", %{conn: conn, session: session} do
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
-      assert has_element?(view, "a[aria-current='page']", "Sessions")
+      assert has_element?(view, "a[aria-current='page']", "Schedule")
     end
   end
 

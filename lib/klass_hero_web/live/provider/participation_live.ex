@@ -31,7 +31,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     socket =
       socket
       |> assign(:page_title, gettext("Manage Participation"))
-      |> assign(:active_nav, :roster)
+      |> assign(:active_nav, :calendar)
       |> assign(:session_id, session_id)
       |> assign(:provider_id, provider_id)
       |> assign(:assigned_program_ids, assigned_program_ids)
@@ -489,7 +489,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
           socket
           |> put_flash(:error, gettext("You are not assigned to this program"))
-          |> push_navigate(to: ~p"/provider/sessions")
+          |> push_navigate(to: ~p"/provider/schedule")
         end
 
       {:error, :not_found} ->
@@ -500,7 +500,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
         socket
         |> put_flash(:error, gettext("Session not found"))
-        |> push_navigate(to: ~p"/provider/sessions")
+        |> push_navigate(to: ~p"/provider/schedule")
     end
   end
 

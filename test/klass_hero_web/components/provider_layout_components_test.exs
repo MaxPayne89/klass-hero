@@ -20,7 +20,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponentsTest do
 
       assert html =~ ~s|aria-current="page"|
       assert html =~ "Overview"
-      assert html =~ "Sessions"
+      assert html =~ "Schedule"
       assert html =~ "Comms"
     end
 
@@ -40,11 +40,37 @@ defmodule KlassHeroWeb.ProviderLayoutComponentsTest do
       assert html =~ "fixed bottom-0"
     end
 
-    test "renders 'Coming soon' tooltip for items without an href", %{} do
-      html = render_pv_sidebar(active: :home)
+    # Provider and staff share this component; before the surface param it always
+    # offered the provider's routes, so a staff-only person got one working entry
+    # out of six and `aria-current` marked a link that ejected them to `/`.
+    test "offers the provider's routes on the provider surface", %{} do
+      html = render_pv_sidebar(active: :calendar, surface: :provider)
 
-      assert html =~ "Schedule"
-      assert html =~ ~s|title="Coming soon"|
+      assert html =~ ~s|href="/provider/schedule"|
+      assert html =~ ~s|href="/provider/dashboard"|
+      refute html =~ ~s|href="/staff/|
+    end
+
+    test "offers the staff's routes on the staff surface", %{} do
+      html = render_pv_sidebar(active: :roster, surface: :staff)
+
+      assert html =~ ~s|href="/staff/dashboard"|
+      assert html =~ ~s|href="/staff/sessions"|
+      assert html =~ ~s|href="/staff/messages"|
+      refute html =~ ~s|href="/provider/|
+    end
+
+    test "names the surface rather than telling staff they are a provider", %{} do
+      assert render_pv_sidebar(active: :home, surface: :staff) =~ "Staff"
+      assert render_pv_sidebar(active: :home, surface: :provider) =~ "Provider"
+    end
+
+    # Every staff LiveView assigns :home, :roster or :messages, so an atom in
+    # play must light a link the staff surface actually offers.
+    for active <- [:home, :roster, :messages] do
+      test "staff surface marks #{active} as the current page", %{} do
+        assert render_pv_sidebar(active: unquote(active), surface: :staff) =~ ~s|aria-current="page"|
+      end
     end
   end
 
@@ -246,10 +272,13 @@ defmodule KlassHeroWeb.ProviderLayoutComponentsTest do
   end
 
   defp render_pv_sidebar(opts) do
-    assigns = %{active: Keyword.fetch!(opts, :active)}
+    assigns = %{
+      active: Keyword.fetch!(opts, :active),
+      surface: Keyword.get(opts, :surface, :provider)
+    }
 
     rendered_to_string(~H"""
-    <ProviderLayoutComponents.pv_sidebar active={@active} />
+    <ProviderLayoutComponents.pv_sidebar active={@active} surface={@surface} />
     """)
   end
 

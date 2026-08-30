@@ -116,9 +116,8 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     selected_status = parse_status(params["status"])
 
     socket
-    |> assign(:date_from, date_from)
-    |> assign(:date_to, date_to)
     |> assign(:selected_status, selected_status)
+    |> apply_date_range(date_from, date_to)
     |> load_sessions()
     |> then(&{:noreply, &1})
   end
@@ -179,7 +178,7 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
 
   defp load_sessions(socket) do
     filters = build_filters(socket.assigns)
-    sessions = Participation.list_admin_sessions(filters)
+    sessions = Participation.list_session_summaries(filters)
     stream(socket, :sessions, sessions, reset: true)
   end
 
@@ -200,6 +199,37 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     do: Map.merge(filters, %{date_from: from, date_to: to})
 
   defp maybe_add_date_range(filters, _, _), do: filters
+
+  # These two dates come from free-form date inputs, so the pair can be any span
+  # a person can click. `Participation.list_session_summaries/1` raises past a
+  # year rather than loading the table, which is right for the calendar that
+  # derives its range but would be a crash here. Clamp and say so: narrowing in
+  # silence would show a subset of what was asked for and look like the answer.
+  # Admin's range comes from two free-form date inputs, so it can exceed what the
+  # context serves. Clamping here keeps the context's raise what it is meant to be:
+  # a programmer error, never a user's click. Reading the bound from the context,
+  # in the context's own unit, is what stops the two drifting apart.
+  defp apply_date_range(socket, %Date{} = from, %Date{} = to) do
+    max_days = Participation.max_session_span_days()
+
+    if Date.diff(to, from) + 1 > max_days do
+      clamped = Date.add(from, max_days - 1)
+
+      socket
+      |> assign(:date_from, from)
+      |> assign(:date_to, clamped)
+      |> put_flash(
+        :info,
+        gettext("Showing the first year from %{from}. Narrow the range to see later sessions.",
+          from: Date.to_iso8601(from)
+        )
+      )
+    else
+      socket
+      |> assign(:date_from, from)
+      |> assign(:date_to, to)
+    end
+  end
 
   defp parse_date("", fallback), do: fallback
   defp parse_date(nil, fallback), do: fallback

@@ -4,7 +4,24 @@ defmodule KlassHeroWeb.UserLive.SettingsTest do
   import KlassHero.AccountsFixtures
   import Phoenix.LiveViewTest
 
+  # Settings renders in `provider_app` for a provider or staff persona, but it sits
+  # in `:require_authenticated_user`, which no `NavSurface` hook covers -- so the
+  # surface has to come from the persona here or the layout falls back to the
+  # provider's routes, five of which bounce a staff-only account.
   alias KlassHero.Accounts
+
+  describe "which navigation the shared provider chrome offers" do
+    setup :register_and_log_in_staff
+
+    test "a staff persona is offered staff routes, not the provider's", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      assert has_element?(lv, "a[href='/staff/dashboard']")
+      assert has_element?(lv, "a[href='/staff/sessions']")
+      refute has_element?(lv, "a[href='/provider/dashboard']")
+      refute has_element?(lv, "a[href='/provider/schedule']")
+    end
+  end
 
   describe "Settings page" do
     test "renders settings page", %{conn: conn} do

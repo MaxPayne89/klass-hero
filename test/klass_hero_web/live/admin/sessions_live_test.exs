@@ -141,6 +141,39 @@ defmodule KlassHeroWeb.Admin.SessionsLiveTest do
       # Session is today, so filtering for yesterday should hide it
       refute render(view) =~ "Art Adventures"
     end
+
+    # Both dates are free-form inputs, so a decade-wide pair is one click away.
+    # `list_session_summaries/1` raises past a year rather than loading the whole
+    # table -- correct for the Schedule calendar, which derives its own range,
+    # and a crash here if this surface did not narrow first.
+    test "a range wider than a year is clamped rather than crashing", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/sessions")
+      from = Date.utc_today() |> Date.add(-30) |> Date.to_iso8601()
+      far = Date.utc_today() |> Date.add(3000) |> Date.to_iso8601()
+
+      html =
+        view
+        |> element("#filter-bar")
+        |> render_change(%{"date_from" => from, "date_to" => far})
+
+      # Still serving the page, and saying it narrowed rather than doing it quietly.
+      assert html =~ "Art Adventures"
+      assert render(view) =~ "Narrow the range"
+    end
+
+    test "a year-wide range is left alone", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/sessions")
+      from = Date.utc_today() |> Date.add(-30) |> Date.to_iso8601()
+      to = Date.utc_today() |> Date.add(300) |> Date.to_iso8601()
+
+      html =
+        view
+        |> element("#filter-bar")
+        |> render_change(%{"date_from" => from, "date_to" => to})
+
+      assert html =~ "Art Adventures"
+      refute html =~ "Narrow the range"
+    end
   end
 
   describe "correction flow" do

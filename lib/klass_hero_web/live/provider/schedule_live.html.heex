@@ -1,0 +1,83 @@
+<div class="max-w-6xl mx-auto">
+  <div class="mb-6">
+    <h1 class={["mb-1", Theme.typography(:page_title)]}>{gettext("Schedule")}</h1>
+    <p class={["text-[var(--fg-muted)]", Theme.typography(:body_small)]}>
+      {gettext("Your sessions, by day, week or month")}
+    </p>
+  </div>
+
+  <div class="mb-4 flex flex-wrap items-center gap-2">
+    <div class="flex items-center gap-1">
+      <.kh_button id="schedule-prev" variant={:secondary} phx-click="prev_period">
+        <span class="sr-only">{gettext("Previous period")}</span>
+        <.icon name="hero-chevron-left" class="w-4 h-4" />
+      </.kh_button>
+      <.kh_button id="schedule-today" variant={:secondary} phx-click="today">
+        {gettext("Today")}
+      </.kh_button>
+      <.kh_button id="schedule-next" variant={:secondary} phx-click="next_period">
+        <span class="sr-only">{gettext("Next period")}</span>
+        <.icon name="hero-chevron-right" class="w-4 h-4" />
+      </.kh_button>
+    </div>
+
+    <p id="schedule-period" class={["flex-1 min-w-[12rem]", Theme.typography(:card_title)]}>
+      {@period_label}
+    </p>
+
+    <%!-- The retired list had a date picker; stepping alone would have made a
+    distant date a long click-through. Its own id, because two date_selectors on
+    one page would collide on the load-bearing "<id>-form". --%>
+    <.date_selector
+      id="schedule-date"
+      name="date"
+      value={@focus_date}
+      label={gettext("Jump to:")}
+      phx_change="change_date"
+    />
+
+    <div class="flex gap-1" role="group" aria-label={gettext("Calendar view")}>
+      <.kh_button
+        :for={
+          {mode, label} <- [
+            {:day, gettext("Day")},
+            {:week, gettext("Week")},
+            {:month, gettext("Month")}
+          ]
+        }
+        id={"view-mode-#{mode}"}
+        variant={if(@view_mode == mode, do: :dark, else: :secondary)}
+        aria-pressed={to_string(@view_mode == mode)}
+        phx-click="set_view_mode"
+        phx-value-mode={mode}
+      >
+        {label}
+      </.kh_button>
+    </div>
+  </div>
+
+  <.async_result :let={sessions_by_date} assign={@sessions}>
+    <:loading>
+      <div
+        id="schedule-loading"
+        class={["py-12 text-center text-[var(--fg-muted)]", Theme.typography(:body_small)]}
+      >
+        {gettext("Loading your schedule…")}
+      </div>
+    </:loading>
+    <:failed :let={_reason}>
+      <.error_alert errors={[gettext("The schedule could not be loaded. Try again in a moment.")]} />
+    </:failed>
+
+    <.calendar_day_list
+      :if={@view_mode == :day}
+      sessions={Map.get(sessions_by_date, @focus_date, [])}
+    />
+    <.calendar_grid
+      :if={@view_mode != :day}
+      days={Enum.to_list(@range)}
+      sessions_by_date={sessions_by_date}
+      focus_date={@focus_date}
+    />
+  </.async_result>
+</div>
