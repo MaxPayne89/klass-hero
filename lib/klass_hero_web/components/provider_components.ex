@@ -19,6 +19,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   import KlassHeroWeb.UIComponents
 
   alias KlassHero.Shared.ChangesetErrors
+  alias KlassHeroWeb.Persona
   alias KlassHeroWeb.Presenters.ChildPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
@@ -4242,7 +4243,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     ~H"""
     <.link
       id={"schedule-session-#{@session.id}"}
-      navigate={~p"/provider/participation/#{@session.id}"}
+      navigate={Persona.session_path(:provider, @session.id)}
       class={
         [
           "block border-l-2 border-hero-blue-600 bg-hero-blue-50",

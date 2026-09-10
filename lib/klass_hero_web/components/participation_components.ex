@@ -675,6 +675,9 @@ defmodule KlassHeroWeb.ParticipationComponents do
   rather than a base-path string, so both routes stay `~p`-verified: a typo fails to
   compile instead of 404ing at runtime.
 
+  The empty state follows from `persona` too — the two surfaces are empty for
+  different reasons — so a caller supplies nothing for it.
+
   Rows render in the order given. The caller owns that order because the two surfaces
   want different ones — the provider reads a program's schedule chronologically, while
   staff open this to act on what is next.
@@ -689,21 +692,13 @@ defmodule KlassHeroWeb.ParticipationComponents do
 
   attr :persona, :atom, required: true, values: [:provider, :staff]
 
-  attr :empty_message, :string,
-    default: nil,
-    doc: """
-    Overrides the empty-state sentence. Deliberately `nil` rather than a `gettext/1`
-    default: an attr default is evaluated once at compile time, which would freeze the
-    compiling process's locale into every render.
-    """
-
   def session_table(assigns) do
     ~H"""
     <%= if @sessions == [] do %>
       <div class="text-center py-12">
         <.icon name="hero-calendar-days" class="w-12 h-12 text-hero-grey-300 mx-auto" />
         <p class="mt-4 text-[var(--fg-muted)]">
-          {@empty_message || gettext("No sessions scheduled yet.")}
+          {empty_message(@persona)}
         </p>
       </div>
     <% else %>
@@ -747,6 +742,15 @@ defmodule KlassHeroWeb.ParticipationComponents do
     <% end %>
     """
   end
+
+  # The two surfaces are empty for different reasons, so they say different things:
+  # a provider seeing none means the program has none, while staff seeing none means
+  # none of them are theirs. Derived from the persona rather than passed in, so a new
+  # caller cannot silently inherit the wrong sentence — and evaluated per render, which
+  # an `attr` default could not be: those are evaluated once at compile time and would
+  # freeze the compiling process's locale into every render.
+  defp empty_message(:provider), do: gettext("No sessions scheduled yet.")
+  defp empty_message(:staff), do: gettext("No sessions assigned to you yet.")
 
   # The link wraps each cell, not the row: an <a> around <td>s is invalid HTML, and
   # LiveView's DOM patcher reparents it on the next update. Four cells, four links —

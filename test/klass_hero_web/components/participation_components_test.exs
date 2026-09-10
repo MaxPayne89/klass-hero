@@ -135,12 +135,13 @@ defmodule KlassHeroWeb.ParticipationComponentsTest do
       assert html =~ "No sessions scheduled yet"
     end
 
-    test "a caller may replace the empty-state sentence" do
+    # Staff see a subset, so "none scheduled" would be false for them: sessions
+    # exist, just none of theirs. The wording follows from the persona.
+    test "staff get their own empty state, not the provider's" do
       html =
         render_component(&ParticipationComponents.session_table/1,
           sessions: [],
-          persona: :staff,
-          empty_message: "No sessions assigned to you yet."
+          persona: :staff
         )
 
       assert html =~ "No sessions assigned to you yet."

@@ -6,6 +6,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   alias KlassHero.Provider.ReadModels.SessionStaffing
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
+  alias KlassHeroWeb.Persona
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -269,7 +270,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
                   </button>
                 <% session.status == :in_progress -> %>
                   <.link
-                    navigate={~p"/staff/participation/#{session.id}"}
+                    navigate={Persona.session_path(:staff, session.id)}
                     class={[
                       "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2 text-center",
                       Theme.rounded(:lg),
@@ -291,7 +292,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
                   </button>
                 <% session.status == :completed -> %>
                   <.link
-                    navigate={~p"/staff/participation/#{session.id}"}
+                    navigate={Persona.session_path(:staff, session.id)}
                     class={[
                       "px-4 py-2 bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-center",
                       Theme.rounded(:lg),

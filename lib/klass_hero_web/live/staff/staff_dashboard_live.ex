@@ -6,7 +6,6 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
   alias KlassHero.Provider
-  alias KlassHero.Provider.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Theme
@@ -23,7 +22,10 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     # memberships read model carries id + business_name — no separate profile lookup needed.
     case Enum.find(memberships, &(&1.provider_id == staff_member.provider_id)) do
       %{provider_id: provider_id, business_name: business_name} ->
-        {programs, completed_programs, program_access} =
+        # The access read model is consumed here and not kept: `program_titles`
+        # below is the only gate either popup needs, and it is derived from the
+        # authorized half of this very split.
+        {programs, completed_programs, _access} =
           StaffLiveHelpers.load_assigned_programs(staff_member)
 
         socket =
@@ -34,17 +36,17 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           |> assign(:memberships, memberships)
           |> assign(:staff_member, staff_member)
           |> assign(:self_view, StaffMemberPresenter.to_self_view(staff_member))
-          |> assign(:program_access, program_access)
           |> assign(:programs_empty?, programs == [])
           |> assign(:completed_empty?, completed_programs == [])
           |> assign(:provider?, Scope.provider?(socket.assigns.current_scope))
           |> assign(:upgrade_confirm?, false)
           |> assign(:show_roster, false)
           |> assign(:sessions_modal, nil)
-          # Both popups title themselves from here rather than from client params.
-          # An id that clears `authorized?/2` is in this map by construction: it and
-          # `program_access` come out of the same `load_assigned_programs/1` split,
-          # so the `fetch!`es below cannot raise.
+          # Membership here *is* the popup gate, which is why neither handler also
+          # asks `authorized?/2`. `programs` is already the authorized half of the
+          # split, so this answers "assigned, open, and still exists" in one lookup
+          # where the pair answered it in two — and the pair spanned two queries, so
+          # a program deleted between them was authorized with no title to show.
           |> assign(:program_titles, Map.new(programs, &{&1.id, &1.title}))
           |> assign(:roster_entries, [])
           |> assign(:roster_program_name, nil)
@@ -114,24 +116,26 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
 
   @impl true
   def handle_event("view_roster", %{"id" => program_id}, socket) do
-    if StaffProgramAccess.authorized?(socket.assigns.program_access, program_id) do
-      roster = Enrollment.list_program_enrollments(program_id)
-      can_message? = Messaging.can_initiate_messaging?(%{provider: socket.assigns.provider})
-      enrolled_count = Enum.count(roster, &(&1.status == :confirmed))
+    case Map.fetch(socket.assigns.program_titles, program_id) do
+      {:ok, program_title} ->
+        roster = Enrollment.list_program_enrollments(program_id)
+        can_message? = Messaging.can_initiate_messaging?(%{provider: socket.assigns.provider})
+        enrolled_count = Enum.count(roster, &(&1.status == :confirmed))
 
-      {:noreply,
-       socket
-       |> close_popups()
-       |> assign(
-         show_roster: true,
-         roster_program_name: Map.fetch!(socket.assigns.program_titles, program_id),
-         roster_program_id: program_id,
-         roster_entries: roster,
-         can_message?: can_message?,
-         roster_enrolled_count: enrolled_count
-       )}
-    else
-      {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
+        {:noreply,
+         socket
+         |> close_popups()
+         |> assign(
+           show_roster: true,
+           roster_program_name: program_title,
+           roster_program_id: program_id,
+           roster_entries: roster,
+           can_message?: can_message?,
+           roster_enrolled_count: enrolled_count
+         )}
+
+      :error ->
+        {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
     end
   end
 
@@ -142,23 +146,25 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
 
   @impl true
   def handle_event("view_sessions", %{"id" => program_id}, socket) do
-    if StaffProgramAccess.authorized?(socket.assigns.program_access, program_id) do
-      sessions =
-        Provider.list_staffed_program_sessions(
-          socket.assigns.provider.id,
-          program_id,
-          socket.assigns.staff_member.id
-        )
+    case Map.fetch(socket.assigns.program_titles, program_id) do
+      {:ok, program_title} ->
+        sessions =
+          Provider.list_staffed_program_sessions(
+            socket.assigns.provider.id,
+            program_id,
+            socket.assigns.staff_member.id
+          )
 
-      {:noreply,
-       socket
-       |> close_popups()
-       |> assign(:sessions_modal, %{
-         program_title: Map.fetch!(socket.assigns.program_titles, program_id),
-         sessions: upcoming_first(sessions)
-       })}
-    else
-      {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
+        {:noreply,
+         socket
+         |> close_popups()
+         |> assign(:sessions_modal, %{
+           program_title: program_title,
+           sessions: upcoming_first(sessions)
+         })}
+
+      :error ->
+        {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
     end
   end
 
@@ -388,9 +394,10 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
       </div>
 
       <%!--
-        Closed programs: named, never actionable. No Sessions link and no Roster
-        button, because `StaffProgramAccess.authorized?/2` refuses both — the
-        markup agrees with the gate rather than being the gate (#1082).
+        Closed programs: named, never actionable. No Sessions button and no Roster
+        button, because both handlers gate on `@program_titles`, which holds only
+        the open half of the split — the markup agrees with the gate rather than
+        being the gate (#1082).
       --%>
       <div :if={not @completed_empty?} class="mt-8">
         <h2 class={Theme.typography(:section_title)}>
@@ -553,11 +560,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           </div>
 
           <div class="flex-1 overflow-y-auto">
-            <.session_table
-              sessions={@sessions_modal.sessions}
-              persona={:staff}
-              empty_message={gettext("No sessions assigned to you yet.")}
-            />
+            <.session_table sessions={@sessions_modal.sessions} persona={:staff} />
           </div>
         </div>
       </div>
