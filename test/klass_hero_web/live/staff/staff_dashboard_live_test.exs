@@ -12,8 +12,6 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   # needs, the listing row the dashboard renders, and the Program Staff Assignment
   # that puts it there. Category is arbitrary — since #1323 it gates nothing, so
   # these tests no longer derive it from `staff.tags`.
-  alias KlassHero.Provider.SessionDetail
-
   defp assigned_program(provider, staff, attrs \\ []) do
     program =
       insert(
@@ -39,39 +37,36 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
         Keyword.merge([program_id: program.id, session_date: ~D[2026-05-01]], attrs)
       )
 
-    %SessionDetail{}
-    |> Ecto.Changeset.change(%{
+    insert(:session_detail_schema,
       session_id: session.id,
       program_id: program.id,
       provider_id: provider.id,
       program_title: program.title,
-      session_date: session.session_date,
-      start_time: ~T[15:00:00],
-      end_time: ~T[16:00:00],
-      status: :scheduled
-    })
-    |> KlassHero.Repo.insert!()
+      session_date: session.session_date
+    )
 
     session
   end
 
+  # One logged-in staff member with a provider, which is the starting state every
+  # describe here needs. `tags` gates nothing since #1323, so it is not seeded.
+  defp log_in_staff(conn) do
+    user = user_fixture(intended_roles: [:staff])
+    provider = provider_profile_fixture()
+
+    staff =
+      staff_member_fixture(%{
+        provider_id: provider.id,
+        user_id: user.id,
+        active: true,
+        invitation_status: :accepted
+      })
+
+    %{conn: log_in_user(conn, user), user: user, provider: provider, staff: staff}
+  end
+
   describe "staff dashboard" do
-    setup %{conn: conn} do
-      user = user_fixture(intended_roles: [:staff])
-      provider = provider_profile_fixture()
-
-      staff =
-        staff_member_fixture(%{
-          provider_id: provider.id,
-          user_id: user.id,
-          active: true,
-          invitation_status: :accepted,
-          tags: ["sports"]
-        })
-
-      conn = log_in_user(conn, user)
-      %{conn: conn, user: user, provider: provider, staff: staff}
-    end
+    setup %{conn: conn}, do: log_in_staff(conn)
 
     test "renders staff dashboard with business name", %{conn: conn, provider: provider} do
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
@@ -135,7 +130,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
-      render_click(view, "view_roster", %{"id" => closed.id, "title" => closed.title})
+      render_click(view, "view_roster", %{"id" => closed.id})
 
       refute has_element?(view, "#staff-roster-modal")
     end
@@ -538,20 +533,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   end
 
   describe "sessions popup" do
-    setup %{conn: conn} do
-      user = user_fixture(intended_roles: [:staff])
-      provider = provider_profile_fixture()
-
-      staff =
-        staff_member_fixture(%{
-          provider_id: provider.id,
-          user_id: user.id,
-          active: true,
-          invitation_status: :accepted
-        })
-
-      %{conn: log_in_user(conn, user), provider: provider, staff: staff}
-    end
+    setup %{conn: conn}, do: log_in_staff(conn)
 
     test "clicking Sessions opens the popup instead of navigating away", %{
       conn: conn,
@@ -658,7 +640,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
-      render_click(view, "view_sessions", %{"id" => closed.id})
+      render_hook(view, "view_sessions", %{"id" => closed.id})
 
       refute has_element?(view, "#staff-sessions-modal")
     end
