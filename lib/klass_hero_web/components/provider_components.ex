@@ -1976,7 +1976,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       role="dialog"
       aria-modal="true"
       aria-labelledby="sessions-modal-title"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       phx-window-keydown="close_sessions"
       phx-key="escape"
     >
@@ -2007,7 +2007,12 @@ defmodule KlassHeroWeb.ProviderComponents do
               <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" />
               {gettext("Create Session")}
             </button>
-            <button type="button" phx-click="close_sessions" aria-label={gettext("Close")}>
+            <button
+              type="button"
+              id="close-sessions-btn"
+              phx-click="close_sessions"
+              aria-label={gettext("Close")}
+            >
               <.icon name="hero-x-mark" class="w-5 h-5" />
             </button>
           </div>
