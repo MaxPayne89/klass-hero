@@ -1,9 +1,9 @@
 defmodule KlassHeroWeb.ParticipationComponentsTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.Factory, only: [build: 2]
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.SessionDetail
   alias KlassHeroWeb.ParticipationComponents
 
   describe "participation_status/1" do
@@ -110,7 +110,7 @@ defmodule KlassHeroWeb.ParticipationComponentsTest do
       test "a #{status} row links every cell to the #{persona} session page" do
         html =
           render_component(&ParticipationComponents.session_table/1,
-            sessions: [session_detail(session_id: "s-42", status: unquote(status))],
+            sessions: [build(:session_detail_schema, session_id: "s-42", status: unquote(status))],
             persona: unquote(persona)
           )
 
@@ -151,8 +151,8 @@ defmodule KlassHeroWeb.ParticipationComponentsTest do
       html =
         render_component(&ParticipationComponents.session_table/1,
           sessions: [
-            session_detail(session_id: "s-1", current_assigned_staff_name: "Alice"),
-            session_detail(
+            build(:session_detail_schema, session_id: "s-1", current_assigned_staff_name: "Alice"),
+            build(:session_detail_schema,
               session_id: "s-2",
               session_date: ~D[2026-05-08],
               status: :cancelled,
@@ -167,25 +167,6 @@ defmodule KlassHeroWeb.ParticipationComponentsTest do
       # Cancelled row hides attendance (same-line match; a dotall regex spans rows
       # and fires even for a correct implementation).
       refute html =~ ~r/0\s*\/\s*0.*cancelled/i
-    end
-
-    defp session_detail(overrides) do
-      struct!(
-        %SessionDetail{
-          session_id: "s-1",
-          program_id: "prog-1",
-          provider_id: "prv-1",
-          session_date: ~D[2026-05-01],
-          start_time: ~T[15:00:00],
-          end_time: ~T[16:00:00],
-          status: :scheduled,
-          program_title: "Judo",
-          current_assigned_staff_name: "Alice",
-          checked_in_count: 0,
-          total_count: 0
-        },
-        overrides
-      )
     end
   end
 end
