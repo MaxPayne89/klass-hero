@@ -6,7 +6,6 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
   alias KlassHero.Provider
-  alias KlassHero.Provider.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Theme
@@ -23,7 +22,10 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     # memberships read model carries id + business_name — no separate profile lookup needed.
     case Enum.find(memberships, &(&1.provider_id == staff_member.provider_id)) do
       %{provider_id: provider_id, business_name: business_name} ->
-        {programs, completed_programs, program_access} =
+        # The access read model is consumed here and not kept: `program_titles`
+        # below is the only gate either popup needs, and it is derived from the
+        # authorized half of this very split.
+        {programs, completed_programs, _access} =
           StaffLiveHelpers.load_assigned_programs(staff_member)
 
         socket =
@@ -34,17 +36,17 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           |> assign(:memberships, memberships)
           |> assign(:staff_member, staff_member)
           |> assign(:self_view, StaffMemberPresenter.to_self_view(staff_member))
-          |> assign(:program_access, program_access)
           |> assign(:programs_empty?, programs == [])
           |> assign(:completed_empty?, completed_programs == [])
           |> assign(:provider?, Scope.provider?(socket.assigns.current_scope))
           |> assign(:upgrade_confirm?, false)
           |> assign(:show_roster, false)
           |> assign(:sessions_modal, nil)
-          # Titles the popup from the server's own data. `view_roster` still takes
-          # its title from client params, which is display-only but spoofable; an
-          # id that clears `authorized?/2` is in this map by construction, since
-          # both derive from the same `load_assigned_programs/1` split.
+          # Membership here *is* the popup gate, which is why neither handler also
+          # asks `authorized?/2`. `programs` is already the authorized half of the
+          # split, so this answers "assigned, open, and still exists" in one lookup
+          # where the pair answered it in two — and the pair spanned two queries, so
+          # a program deleted between them was authorized with no title to show.
           |> assign(:program_titles, Map.new(programs, &{&1.id, &1.title}))
           |> assign(:roster_entries, [])
           |> assign(:roster_program_name, nil)
@@ -113,63 +115,62 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   end
 
   @impl true
-  def handle_event("view_roster", %{"id" => program_id} = params, socket) do
-    if StaffProgramAccess.authorized?(socket.assigns.program_access, program_id) do
-      roster = Enrollment.list_program_enrollments(program_id)
-      can_message? = Messaging.can_initiate_messaging?(%{provider: socket.assigns.provider})
-      enrolled_count = Enum.count(roster, &(&1.status == :confirmed))
+  def handle_event("view_roster", %{"id" => program_id}, socket) do
+    case Map.fetch(socket.assigns.program_titles, program_id) do
+      {:ok, program_title} ->
+        roster = Enrollment.list_program_enrollments(program_id)
+        can_message? = Messaging.can_initiate_messaging?(%{provider: socket.assigns.provider})
+        enrolled_count = Enum.count(roster, &(&1.status == :confirmed))
 
-      {:noreply,
-       socket
-       |> assign(:sessions_modal, nil)
-       |> assign(
-         show_roster: true,
-         roster_program_name: Map.get(params, "title", program_id),
-         roster_program_id: program_id,
-         roster_entries: roster,
-         can_message?: can_message?,
-         roster_enrolled_count: enrolled_count
-       )}
-    else
-      {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
+        {:noreply,
+         socket
+         |> close_popups()
+         |> assign(
+           show_roster: true,
+           roster_program_name: program_title,
+           roster_program_id: program_id,
+           roster_entries: roster,
+           can_message?: can_message?,
+           roster_enrolled_count: enrolled_count
+         )}
+
+      :error ->
+        {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
     end
   end
 
   @impl true
   def handle_event("close_roster", _params, socket) do
-    {:noreply, reset_roster(socket)}
+    {:noreply, close_popups(socket)}
   end
 
-  # Only one popup may be open at a time. Both are full-screen `z-50` overlays and
-  # the sessions popup binds `phx-window-keydown`, so with both on screen stacking
-  # falls to DOM order, Escape reaches only one of them, and a click inside the
-  # roster counts as "away" from the sessions panel and closes it.
   @impl true
   def handle_event("view_sessions", %{"id" => program_id}, socket) do
-    if StaffProgramAccess.authorized?(socket.assigns.program_access, program_id) do
-      sessions =
-        Provider.list_staffed_program_sessions(
-          socket.assigns.provider.id,
-          program_id,
-          socket.assigns.staff_member.id
-        )
+    case Map.fetch(socket.assigns.program_titles, program_id) do
+      {:ok, program_title} ->
+        sessions =
+          Provider.list_staffed_program_sessions(
+            socket.assigns.provider.id,
+            program_id,
+            socket.assigns.staff_member.id
+          )
 
-      {:noreply,
-       socket
-       |> reset_roster()
-       |> assign(:sessions_modal, %{
-         program_id: program_id,
-         program_title: Map.fetch!(socket.assigns.program_titles, program_id),
-         sessions: upcoming_first(sessions)
-       })}
-    else
-      {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
+        {:noreply,
+         socket
+         |> close_popups()
+         |> assign(:sessions_modal, %{
+           program_title: program_title,
+           sessions: upcoming_first(sessions)
+         })}
+
+      :error ->
+        {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
     end
   end
 
   @impl true
   def handle_event("close_sessions", _params, socket) do
-    {:noreply, assign(socket, :sessions_modal, nil)}
+    {:noreply, close_popups(socket)}
   end
 
   @impl true
@@ -378,7 +379,6 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                 id={"roster-btn-#{program.id}"}
                 phx-click="view_roster"
                 phx-value-id={program.id}
-                phx-value-title={program.title}
                 class={[
                   "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium",
                   "text-hero-grey-700 bg-hero-grey-100 hover:bg-hero-grey-200",
@@ -394,9 +394,10 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
       </div>
 
       <%!--
-        Closed programs: named, never actionable. No Sessions link and no Roster
-        button, because `StaffProgramAccess.authorized?/2` refuses both — the
-        markup agrees with the gate rather than being the gate (#1082).
+        Closed programs: named, never actionable. No Sessions button and no Roster
+        button, because both handlers gate on `@program_titles`, which holds only
+        the open half of the split — the markup agrees with the gate rather than
+        being the gate (#1082).
       --%>
       <div :if={not @completed_empty?} class="mt-8">
         <h2 class={Theme.typography(:section_title)}>
@@ -559,11 +560,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           </div>
 
           <div class="flex-1 overflow-y-auto">
-            <.session_table
-              sessions={@sessions_modal.sessions}
-              persona={:staff}
-              empty_message={gettext("No sessions assigned to you yet.")}
-            />
+            <.session_table sessions={@sessions_modal.sessions} persona={:staff} />
           </div>
         </div>
       </div>
@@ -571,8 +568,15 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     """
   end
 
-  defp reset_roster(socket) do
+  # Only one popup may be open at a time, so every opener and closer clears *both*.
+  # Both are full-screen `z-50` overlays and the sessions one binds a window-level
+  # `phx-window-keydown`, so with both on screen stacking falls to DOM order, Escape
+  # reaches only one, and a click inside the roster counts as "away" from the sessions
+  # panel and closes it. Clearing the popup that was already shut is a no-op, which is
+  # what lets a third popup be one line here rather than an edit to every handler.
+  defp close_popups(socket) do
     assign(socket,
+      sessions_modal: nil,
       show_roster: false,
       roster_entries: [],
       roster_program_name: nil,

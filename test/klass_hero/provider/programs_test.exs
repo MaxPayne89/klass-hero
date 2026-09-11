@@ -39,19 +39,19 @@ defmodule KlassHero.Provider.ProgramsTest do
       provider_id = Ecto.UUID.generate()
       program_id = Ecto.UUID.generate()
 
-      insert_session(%{
+      insert(:session_detail_schema,
         program_id: program_id,
         provider_id: provider_id,
         session_date: ~D[2026-05-02],
         start_time: ~T[09:00:00]
-      })
+      )
 
-      insert_session(%{
+      insert(:session_detail_schema,
         program_id: program_id,
         provider_id: provider_id,
         session_date: ~D[2026-05-01],
         start_time: ~T[15:00:00]
-      })
+      )
 
       [first, second] = Provider.list_program_sessions(provider_id, program_id)
 
@@ -64,7 +64,7 @@ defmodule KlassHero.Provider.ProgramsTest do
       mine = Ecto.UUID.generate()
       theirs = Ecto.UUID.generate()
 
-      insert_session(%{program_id: program_id, provider_id: theirs})
+      insert(:session_detail_schema, program_id: program_id, provider_id: theirs)
 
       assert [] == Provider.list_program_sessions(mine, program_id)
     end
@@ -76,7 +76,11 @@ defmodule KlassHero.Provider.ProgramsTest do
       program_id = Ecto.UUID.generate()
       session_id = Ecto.UUID.generate()
 
-      insert_session(%{session_id: session_id, program_id: program_id, provider_id: provider_id})
+      insert(:session_detail_schema,
+        session_id: session_id,
+        program_id: program_id,
+        provider_id: provider_id
+      )
 
       assert {:ok, %SessionDetail{} = detail} = Programs.get_session_detail(session_id)
       assert detail.session_id == session_id
@@ -128,11 +132,11 @@ defmodule KlassHero.Provider.ProgramsTest do
     defp staffed_session(program, provider, attrs \\ %{}) do
       session = insert(:program_session_schema, Map.merge(%{program_id: program.id}, attrs))
 
-      insert_session(%{
+      insert(:session_detail_schema,
         session_id: session.id,
         program_id: program.id,
         provider_id: provider.id
-      })
+      )
 
       session
     end
@@ -189,20 +193,5 @@ defmodule KlassHero.Provider.ProgramsTest do
 
       assert [] == Provider.list_staffed_program_sessions(provider.id, program.id, staff.id)
     end
-  end
-
-  defp insert_session(attrs) do
-    defaults = %{
-      session_id: Ecto.UUID.generate(),
-      program_title: "Judo",
-      session_date: ~D[2026-05-01],
-      start_time: ~T[09:00:00],
-      end_time: ~T[10:00:00],
-      status: :scheduled
-    }
-
-    %SessionDetail{}
-    |> Ecto.Changeset.change(Map.merge(defaults, attrs))
-    |> Repo.insert!()
   end
 end

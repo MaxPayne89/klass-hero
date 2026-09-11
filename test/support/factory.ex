@@ -42,6 +42,7 @@ defmodule KlassHero.Factory do
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Provider.SessionStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
@@ -796,6 +797,39 @@ defmodule KlassHero.Factory do
       max_capacity: 20,
       status: "scheduled",
       notes: nil
+    }
+  end
+
+  @doc """
+  Factory for `provider_session_details` rows — the read table the
+  `ProviderSessionDetails` projection owns.
+
+  Mints **no** parent rows, unlike its write-side siblings. Seeding a program or a
+  provider here would put phantom rows in a projection table that tests count, and
+  the columns carry no `references`, so bare UUIDs insert cleanly.
+
+  The id defaults are deliberately unrelated to anything: every read filters on
+  `provider_id` and `program_id`, so forgetting to override them yields an empty
+  result and a failing assertion rather than a test that passes for the wrong reason.
+
+  ## Examples
+
+      insert(:session_detail_schema, session_id: session.id, program_id: p.id, provider_id: pv.id)
+      build(:session_detail_schema, status: :cancelled)
+  """
+  def session_detail_schema_factory do
+    %SessionDetail{
+      session_id: Ecto.UUID.generate(),
+      program_id: Ecto.UUID.generate(),
+      provider_id: Ecto.UUID.generate(),
+      program_title: "Judo",
+      session_date: ~D[2026-05-01],
+      start_time: ~T[09:00:00],
+      end_time: ~T[10:00:00],
+      status: :scheduled,
+      current_assigned_staff_name: nil,
+      checked_in_count: 0,
+      total_count: 0
     }
   end
 
