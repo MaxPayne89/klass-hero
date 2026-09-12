@@ -235,7 +235,7 @@ defmodule KlassHeroWeb.MarketingComponents do
         <div class="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full bg-white shadow-sm border border-[var(--border-light)]">
           <.icon name="hero-sparkles" class="w-4 h-4 text-[var(--fg-link)]" />
           <span class="text-sm font-semibold">
-            {gettext("Berlin's #1 network for youth educators")}
+            {gettext("Berlin's safest, easiest way to book kids' activities")}
           </span>
         </div>
 

@@ -36,6 +36,12 @@ defmodule KlassHeroWeb.ForProvidersLive do
       <div class="absolute -bottom-20 -left-20 w-[28rem] h-[28rem] rounded-full bg-hero-yellow-500 opacity-15 blur-3xl">
       </div>
       <div class="relative max-w-6xl mx-auto px-6 text-center">
+        <div class="inline-flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full border border-white/20 text-white/80">
+          <.icon name="hero-sparkles" class="w-4 h-4" />
+          <span class="text-sm font-semibold">
+            {gettext("Berlin's #1 network for youth educators")}
+          </span>
+        </div>
         <.kh_pill tone={:accent} class="mb-6">{gettext("For Providers")}</.kh_pill>
         <%!-- typography-lint-ignore: marketing hero override using fluid clamp size for impact --%>
         <h1 class="text-white font-display font-extrabold tracking-tight text-[clamp(40px,6vw,76px)] leading-[1.02]">
