@@ -1,8 +1,8 @@
 defmodule KlassHero.Participation.ProgramProviderResolverTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Participation.ProgramProviderResolver
   alias KlassHero.Factory
+  alias KlassHero.Participation.ProgramProviderResolver
 
   describe "resolve_provider_id/1" do
     test "returns provider_id for an existing program" do
