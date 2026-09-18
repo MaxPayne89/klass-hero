@@ -23,30 +23,17 @@ defmodule KlassHero.Participation.ProgramProviderResolver do
 
   alias KlassHero.ProgramCatalog
 
-  require Logger
-
   def resolve_provider_id(program_id) when is_binary(program_id) do
-    with {:ok, program} <- fetch_program(program_id), do: {:ok, program.provider_id}
+    case ProgramCatalog.get_programs_by_ids([program_id]) do
+      [program | _] -> {:ok, program.provider_id}
+      _other -> {:error, :program_not_found}
+    end
   end
 
   def resolve_provider_details(program_id) when is_binary(program_id) do
-    with {:ok, program} <- fetch_program(program_id) do
-      {:ok, %{provider_id: program.provider_id, program_title: program.title}}
-    end
-  end
-
-  defp fetch_program(program_id) do
     case ProgramCatalog.get_programs_by_ids([program_id]) do
-      [program] -> {:ok, program}
+      [program] -> {:ok, %{provider_id: program.provider_id, program_title: program.title}}
       _other -> {:error, :program_not_found}
     end
-  rescue
-    error ->
-      Logger.warning("[ProgramProviderResolver] Failed to fetch program",
-        program_id: program_id,
-        error: Exception.message(error)
-      )
-
-      {:error, :program_not_found}
   end
 end

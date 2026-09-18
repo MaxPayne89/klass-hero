@@ -33,8 +33,8 @@ defmodule KlassHero.DataCase do
   end
 
   setup tags do
-    KlassHero.DataCase.setup_sandbox(tags)
-    KlassHero.DataCase.setup_storage()
+    setup_sandbox(tags)
+    setup_storage()
     :ok
   end
 
